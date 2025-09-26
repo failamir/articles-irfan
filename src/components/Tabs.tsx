@@ -2,8 +2,19 @@ import React from 'react'
 
 type Tab = { id: string; label: string }
 
-export const Tabs: React.FC<{ tabs: Tab[]; defaultActive?: string; onChange?: (id: string) => void }> = ({ tabs, defaultActive, onChange }) => {
-  const [active, setActive] = React.useState<string>(defaultActive ?? tabs[0]?.id)
+export const Tabs: React.FC<{
+  tabs: Tab[];
+  defaultActive?: string;
+  value?: string;
+  onChange?: (id: string) => void;
+}> = ({ tabs, defaultActive, value, onChange }) => {
+  const isControlled = value !== undefined
+  const [internal, setInternal] = React.useState<string>(defaultActive ?? tabs[0]?.id)
+  const active = isControlled ? (value as string) : internal
+
+  React.useEffect(() => {
+    if (!isControlled && defaultActive) setInternal(defaultActive)
+  }, [defaultActive, isControlled])
 
   return (
     <div className="tabs">
@@ -16,7 +27,7 @@ export const Tabs: React.FC<{ tabs: Tab[]; defaultActive?: string; onChange?: (i
             aria-controls={tab.id}
             id={`btn-${tab.id}`}
             className={`tab-btn ${active === tab.id ? 'active' : ''}`}
-            onClick={() => { setActive(tab.id); onChange?.(tab.id) }}
+            onClick={() => { if (!isControlled) setInternal(tab.id); onChange?.(tab.id) }}
           >
             {tab.label}
           </button>
