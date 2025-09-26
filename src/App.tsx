@@ -63,7 +63,6 @@ export default function App() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-              <button className="search-btn" type="submit">Search</button>
             </form>
           </div>
         </section>
