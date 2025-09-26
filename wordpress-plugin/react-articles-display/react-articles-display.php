@@ -310,3 +310,73 @@ function react_articles_deactivate()
     // Cleanup jika diperlukan
 }
 register_deactivation_hook(__FILE__, 'react_articles_deactivate');
+
+/**
+ * REST API: Receive height events from React app
+ */
+function react_articles_rest_register_routes() {
+    register_rest_route(
+        'react-articles/v1',
+        '/height',
+        array(
+            'methods'  => 'POST',
+            'callback' => 'react_articles_rest_height_handler',
+            'permission_callback' => '__return_true', // Public endpoint; tighten if needed
+            'args' => array(
+                'height' => array('required' => true),
+                'isExpanded' => array('required' => true),
+                'iframeId' => array('required' => false),
+                'ts' => array('required' => false),
+            ),
+        )
+    );
+}
+add_action('rest_api_init', 'react_articles_rest_register_routes');
+
+function react_articles_rest_height_handler(WP_REST_Request $request) {
+    $height = intval($request->get_param('height'));
+    $is_expanded = filter_var($request->get_param('isExpanded'), FILTER_VALIDATE_BOOLEAN);
+    $iframe_id = sanitize_text_field($request->get_param('iframeId'));
+    $ts = sanitize_text_field($request->get_param('ts'));
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? sanitize_text_field($_SERVER['HTTP_ORIGIN']) : '';
+
+    // Store last event as transient for debugging/inspection
+    set_transient('react_articles_last_height', array(
+        'time' => current_time('mysql'),
+        'height' => $height,
+        'isExpanded' => $is_expanded,
+        'iframeId' => $iframe_id,
+        'origin' => $origin,
+        'ts' => $ts,
+    ), 12 * HOUR_IN_SECONDS);
+
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[RAD][WP REST] height event: ' . wp_json_encode(array(
+            'height' => $height,
+            'isExpanded' => $is_expanded,
+            'iframeId' => $iframe_id,
+            'origin' => $origin,
+            'ts' => $ts,
+        )));
+    }
+
+    return rest_ensure_response(array('ok' => true));
+}
+
+// Basic CORS for our namespace (allow POST from the React app origin)
+function react_articles_rest_cors($served, $result, $request, $server) {
+    $route = $request->get_route();
+    if (strpos($route, '/react-articles/v1/') === 0) {
+        $origin = isset($_SERVER['HTTP_ORIGIN']) ? sanitize_text_field($_SERVER['HTTP_ORIGIN']) : '*';
+        // You can pin this to your Vercel origin if desired
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+        header('Access-Control-Allow-Methods: POST, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type');
+        if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
+            return true;
+        }
+    }
+    return $served;
+}
+add_filter('rest_pre_serve_request', 'react_articles_rest_cors', 10, 4);
