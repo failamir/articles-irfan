@@ -13,6 +13,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 iframe.onload = function() {
                     container.classList.remove("loading");
                     this.style.opacity = "1";
+
+                    // Store initial height if not set
+                    var initialHeight = this.style.height || '600px';
+                    this.setAttribute('data-collapsed-height', initialHeight);
+
+                    // Notify the iframe content that parent is ready
+                    if (this.contentWindow) {
+                        this.contentWindow.postMessage({ type: 'IFRAME_READY' }, '*');
+                    }
                 };
             }
         })();
@@ -37,41 +46,16 @@ document.addEventListener("DOMContentLoaded", function() {
             }
             
             button.addEventListener('click', function(evt) {
-                isExpanded = !isExpanded;
-                var btn = evt.target || evt.srcElement;
-                
-                if (isExpanded) {
-                    iframe.style.height = expandedHeight;
-                    btn.textContent = 'Tutup';
-                    btn.classList.add('expanded');
-                    
-                    // Scroll to the iframe
-                    if (typeof iframe.scrollIntoView === 'function') {
-                        var scrollOptions = { behavior: 'smooth', block: 'nearest' };
-                        iframe.scrollIntoView(scrollOptions);
-                    }
-                    
-                    // Send message to iframe to notify it's expanded
-                    if (iframe.contentWindow) {
-                        var message = JSON.stringify({ 
-                            type: 'iframeExpanded', 
-                            isExpanded: true 
-                        });
-                        iframe.contentWindow.postMessage(message, '*');
-                    }
-                } else {
-                    iframe.style.height = collapsedHeight;
-                    btn.textContent = 'Lihat Semua';
-                    btn.classList.remove('expanded');
-                    
-                    // Send message to iframe to notify it's collapsed
-                    if (iframe.contentWindow) {
-                        var message = JSON.stringify({ 
-                            type: 'iframeExpanded', 
-                            isExpanded: false 
-                        });
-                        iframe.contentWindow.postMessage(message, '*');
-                    }
+                evt.preventDefault();
+                // Ask iframe (React app) to toggle; it will reply with height via REACT_APP_HEIGHT
+                if (iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({ type: 'TOGGLE_EXPAND' }, '*');
+                }
+
+                // Optional scroll into view to keep context
+                if (typeof iframe.scrollIntoView === 'function') {
+                    var scrollOptions = { behavior: 'smooth', block: 'nearest' };
+                    iframe.scrollIntoView(scrollOptions);
                 }
             });
             
@@ -99,35 +83,62 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Listen for messages from iframe
     var handleMessage = function(event) {
-        try {
-            var data = JSON.parse(event.data);
-            if (!data || typeof data !== 'object' || !data.type) return;
-            
-            if (data.type === 'requestHeight') {
-                var iframe = document.getElementById(data.iframeId);
-                if (!iframe || !iframe.contentWindow) return;
-                
-                var button = document.querySelector('[data-iframe-id="' + data.iframeId + '"]');
-                if (!button) return;
-                
-                var isExpanded = button.classList.contains('expanded');
-                var height = isExpanded ? 
-                    button.getAttribute('data-expanded-height') : 
-                    button.getAttribute('data-collapsed-height');
-                
-                var response = JSON.stringify({ 
-                    type: 'setHeight',
-                    isExpanded: isExpanded,
-                    height: height
-                });
-                
-                iframe.contentWindow.postMessage(response, '*');
+        var payload = null;
+        // Support both object and JSON string payloads
+        if (typeof event.data === 'string') {
+            try { payload = JSON.parse(event.data); } catch (e) { payload = null; }
+        } else if (typeof event.data === 'object' && event.data !== null) {
+            payload = event.data;
+        }
+
+        if (!payload || !payload.type) return;
+
+        // React app sends its computed height
+        if (payload.type === 'REACT_APP_HEIGHT') {
+            // Find the corresponding iframe if possible
+            var targetIframe = null;
+            // Use event.source to locate the iframe window
+            var allIframes = document.getElementsByTagName('iframe');
+            for (var ii = 0; ii < allIframes.length; ii++) {
+                if (allIframes[ii].contentWindow === event.source) {
+                    targetIframe = allIframes[ii];
+                    break;
+                }
             }
-        } catch (e) {
-            // Ignore invalid messages
-            if (window.console && typeof window.console.error === 'function') {
-                console.error('Error processing message:', e);
+            if (!targetIframe) return;
+
+            // Adjust height
+            if (typeof payload.height === 'number') {
+                targetIframe.style.height = payload.height + 'px';
             }
+
+            // Update any button linked to this iframe
+            var btn = document.querySelector('[data-iframe-id="' + targetIframe.id + '"]');
+            if (btn) {
+                if (payload.isExpanded) {
+                    btn.textContent = 'Tutup';
+                    btn.classList.add('expanded');
+                } else {
+                    var collapsed = btn.getAttribute('data-collapsed-height') || targetIframe.getAttribute('data-collapsed-height') || '600px';
+                    targetIframe.style.height = collapsed;
+                    btn.textContent = 'Lihat Semua';
+                    btn.classList.remove('expanded');
+                }
+            }
+            return;
+        }
+
+        // Legacy message: iframe requests current target heights
+        if (payload.type === 'requestHeight') {
+            var ifm = document.getElementById(payload.iframeId);
+            if (!ifm || !ifm.contentWindow) return;
+            var button = document.querySelector('[data-iframe-id="' + payload.iframeId + '"]');
+            if (!button) return;
+            var expanded = button.classList.contains('expanded');
+            var height = expanded ? button.getAttribute('data-expanded-height') : button.getAttribute('data-collapsed-height');
+            var response = JSON.stringify({ type: 'setHeight', isExpanded: expanded, height: height });
+            ifm.contentWindow.postMessage(response, '*');
+            return;
         }
     };
     

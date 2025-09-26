@@ -40,6 +40,50 @@ export default function App() {
     setCategoryExpanded(false)
   }, [activeTab])
 
+  // Listen for messages from parent (WordPress) to toggle expansion
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Optionally validate origin
+      if (event.origin !== 'https://sozo.treonstudio.com') return;
+
+      if (event.data && typeof event.data === 'object') {
+        if (event.data.type === 'TOGGLE_EXPAND') {
+          setLatestExpanded(prev => !prev)
+        }
+        if (event.data.type === 'IFRAME_READY') {
+          // Parent indicates iframe wrapper is ready; send current height
+          const height = document.documentElement.scrollHeight
+          if (window.self !== window.top) {
+            window.parent.postMessage({
+              type: 'REACT_APP_HEIGHT',
+              height,
+              isExpanded: latestExpanded,
+            }, '*')
+          }
+        }
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [latestExpanded])
+
+  // Send height to parent whenever latestExpanded changes (only when embedded)
+  React.useEffect(() => {
+    if (window.self !== window.top) {
+      const sendHeight = () => {
+        const height = document.documentElement.scrollHeight
+        window.parent.postMessage({
+          type: 'REACT_APP_HEIGHT',
+          height,
+          isExpanded: latestExpanded,
+        }, '*')
+      }
+      sendHeight()
+      const timer = setTimeout(sendHeight, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [latestExpanded, activeTab, query])
+
   return (
     <div className="container">
       <main>
