@@ -20,7 +20,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
                     // Notify the iframe content that parent is ready
                     if (this.contentWindow) {
-                        this.contentWindow.postMessage({ type: 'IFRAME_READY' }, '*');
+                        var reactOrigin;
+                        try { reactOrigin = new URL(this.src).origin; } catch (e) { reactOrigin = '*'; }
+                        if (window.console && window.console.log) {
+                            console.log('[RAD][WP] iframe loaded, notifying child IFRAME_READY', { reactOrigin, iframeId: this.id });
+                        }
+                        this.contentWindow.postMessage({ type: 'IFRAME_READY' }, reactOrigin || '*');
                     }
                 };
             }
@@ -49,7 +54,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 evt.preventDefault();
                 // Ask iframe (React app) to toggle; it will reply with height via REACT_APP_HEIGHT
                 if (iframe.contentWindow) {
-                    iframe.contentWindow.postMessage({ type: 'TOGGLE_EXPAND' }, '*');
+                    var reactOrigin;
+                    try { reactOrigin = new URL(iframe.src).origin; } catch (e) { reactOrigin = '*'; }
+                    if (window.console && window.console.log) {
+                        console.log('[RAD][WP] sending TOGGLE_EXPAND to child', { reactOrigin, iframeId: iframe.id });
+                    }
+                    iframe.contentWindow.postMessage({ type: 'TOGGLE_EXPAND' }, reactOrigin || '*');
                 }
 
                 // Optional scroll into view to keep context
@@ -93,6 +103,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (!payload || !payload.type) return;
 
+        if (window.console && window.console.log) {
+            console.log('[RAD][WP] message received from iframe', { origin: event.origin, payload });
+        }
+
         // React app sends its computed height
         if (payload.type === 'REACT_APP_HEIGHT') {
             // Find the corresponding iframe if possible
@@ -107,9 +121,23 @@ document.addEventListener("DOMContentLoaded", function() {
             }
             if (!targetIframe) return;
 
+            // Security: ensure event.origin matches iframe origin
+            try {
+                var expectedOrigin = new URL(targetIframe.src).origin;
+                if (expectedOrigin && event.origin && expectedOrigin !== event.origin) {
+                    if (window.console && window.console.warn) {
+                        console.warn('[RAD][WP] ignored message due to origin mismatch', { expectedOrigin, origin: event.origin });
+                    }
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+
             // Adjust height
             if (typeof payload.height === 'number') {
                 targetIframe.style.height = payload.height + 'px';
+                if (window.console && window.console.log) {
+                    console.log('[RAD][WP] applying height from child', { height: payload.height, isExpanded: payload.isExpanded, iframeId: targetIframe.id });
+                }
             }
 
             // Update any button linked to this iframe
@@ -123,6 +151,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     targetIframe.style.height = collapsed;
                     btn.textContent = 'Lihat Semua';
                     btn.classList.remove('expanded');
+                    if (window.console && window.console.log) {
+                        console.log('[RAD][WP] reverted to collapsed height', { collapsed, iframeId: targetIframe.id });
+                    }
                 }
             }
             return;
@@ -138,6 +169,9 @@ document.addEventListener("DOMContentLoaded", function() {
             var height = expanded ? button.getAttribute('data-expanded-height') : button.getAttribute('data-collapsed-height');
             var response = JSON.stringify({ type: 'setHeight', isExpanded: expanded, height: height });
             ifm.contentWindow.postMessage(response, '*');
+            if (window.console && window.console.log) {
+                console.log('[RAD][WP] legacy: responded to requestHeight', { iframeId: payload.iframeId, expanded, height });
+            }
             return;
         }
     };

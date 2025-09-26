@@ -44,16 +44,26 @@ export default function App() {
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // Optionally validate origin
-      if (event.origin !== 'https://sozo.treonstudio.com') return;
+      // if (event.origin !== 'https://YOUR_WORDPRESS_DOMAIN') return;
+      console.log('[RAD][React] message received from parent:', {
+        origin: event.origin,
+        data: event.data,
+      })
+      if (event.origin !== 'https://sozo.treonstudio.com') {
+        console.log('[RAD][React] ignored message due to origin mismatch')
+        return
+      }
 
       if (event.data && typeof event.data === 'object') {
         if (event.data.type === 'TOGGLE_EXPAND') {
+          console.log('[RAD][React] toggling latestExpanded via parent request')
           setLatestExpanded(prev => !prev)
         }
         if (event.data.type === 'IFRAME_READY') {
           // Parent indicates iframe wrapper is ready; send current height
           const height = document.documentElement.scrollHeight
           if (window.self !== window.top) {
+            console.log('[RAD][React] parent ready detected, posting current height', { height, latestExpanded })
             window.parent.postMessage({
               type: 'REACT_APP_HEIGHT',
               height,
@@ -72,6 +82,7 @@ export default function App() {
     if (window.self !== window.top) {
       const sendHeight = () => {
         const height = document.documentElement.scrollHeight
+        console.log('[RAD][React] posting height to parent', { height, latestExpanded })
         window.parent.postMessage({
           type: 'REACT_APP_HEIGHT',
           height,
