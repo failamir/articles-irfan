@@ -55,7 +55,9 @@ function react_articles_shortcode($atts)
     // Parameter URL
     $params = array(
         'embed' => 'true',
-        'theme' => in_array(strtolower($atts['theme']), ['light', 'dark']) ? strtolower($atts['theme']) : 'light'
+        'theme' => in_array(strtolower($atts['theme']), ['light', 'dark']) ? strtolower($atts['theme']) : 'light',
+        // Provide parent origin to the React app so it can postMessage/POST back reliably
+        'wpOrigin' => site_url(),
     );
 
     // Tambahkan kategori jika disediakan
@@ -106,14 +108,11 @@ add_shortcode('react_articles', 'react_articles_shortcode');
  */
 function react_articles_enqueue_styles()
 {
-    // Enqueue the JavaScript file
-    wp_enqueue_script(
-        'react-articles-js',
-        plugins_url('assets/js/expand-iframe.js', __FILE__),
-        array(),
-        '1.0.0',
-        true
-    );
+    // Enqueue the JavaScript file with cache-busting
+    $js_path = plugin_dir_path(__FILE__) . 'assets/js/expand-iframe.js';
+    $js_url  = plugins_url('assets/js/expand-iframe.js', __FILE__);
+    $version = file_exists($js_path) ? filemtime($js_path) : time();
+    wp_enqueue_script('react-articles-js', $js_url, array(), $version, true);
 
     $css = '
     <style>
