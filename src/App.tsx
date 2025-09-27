@@ -10,14 +10,25 @@ export default function App() {
 
   const parentOrigin = React.useMemo(() => {
     try {
+      const params = new URLSearchParams(window.location.search)
+      const fromParam = params.get('wpOrigin') || params.get('parent')
+      if (fromParam) return new URL(fromParam).origin
+    } catch {}
+    try {
       if (document.referrer) return new URL(document.referrer).origin
     } catch {}
-    return '*'
+    // Optional: fallback to env if provided
+    // @ts-ignore
+    const envOrigin = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WP_ORIGIN) ? import.meta.env.VITE_WP_ORIGIN : ''
+    if (envOrigin) {
+      try { return new URL(envOrigin).origin } catch {}
+    }
+    return ''
   }, [])
 
   const postHeightToWordPress = React.useCallback((height: number, isExpanded: boolean) => {
     try {
-      if (!parentOrigin || parentOrigin === '*') {
+      if (!parentOrigin) {
         console.warn('[RAD][React] cannot POST to WP because parentOrigin is unknown')
         return
       }
@@ -83,10 +94,10 @@ export default function App() {
         origin: event.origin,
         data: event.data,
       })
-      if (event.origin !== 'https://sozo.treonstudio.com') {
-        console.log('[RAD][React] ignored message due to origin mismatch')
-        return
-      }
+      // if (event.origin !== 'https://sozo.treonstudio.com') {
+      //   console.log('[RAD][React] ignored message due to origin mismatch')
+      //   return
+      // }
 
       if (event.data && typeof event.data === 'object') {
         if (event.data.type === 'TOGGLE_EXPAND') {
@@ -111,9 +122,10 @@ export default function App() {
     return () => window.removeEventListener('message', handleMessage)
   }, [latestExpanded])
 
-  // Send height to parent whenever latestExpanded changes (only when embedded)
+  // Send height to parent whenever latestExpanded changes (only when embedded),
+  // but always POST to WordPress if parentOrigin is known
   React.useEffect(() => {
-    if (window.self !== window.top) {
+    const doWork = () => {
       const sendHeight = () => {
         const doc = document
         const height = Math.max(
@@ -124,8 +136,12 @@ export default function App() {
           doc.body.clientHeight,
           doc.documentElement.clientHeight,
         )
-        console.log('[RAD][React] posting height to parent', { height, latestExpanded, parentOrigin })
-        window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: latestExpanded }, parentOrigin)
+        if (window.self !== window.top) {
+          console.log('[RAD][React] posting height to parent', { height, latestExpanded, parentOrigin })
+          window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: latestExpanded }, parentOrigin || '*')
+        } else {
+          console.log('[RAD][React] not embedded, skipping postMessage, will still POST to WP if parentOrigin known')
+        }
         // Also notify WordPress via REST for server-side observability
         postHeightToWordPress(height, latestExpanded)
       }
@@ -133,6 +149,7 @@ export default function App() {
       const timer = setTimeout(sendHeight, 500)
       return () => clearTimeout(timer)
     }
+    return doWork()
   }, [latestExpanded, activeTab, query])
 
   return (
@@ -170,26 +187,29 @@ export default function App() {
                 e.preventDefault();
                 setLatestExpanded(v => !v)
                 // Immediately post height after toggle using rAF to wait for DOM update
-                if (window.self !== window.top) {
-                  const postSoon = () => {
-                    const doc = document
-                    const height = Math.max(
-                      doc.body.scrollHeight,
-                      doc.documentElement.scrollHeight,
-                      doc.body.offsetHeight,
-                      doc.documentElement.offsetHeight,
-                      doc.body.clientHeight,
-                      doc.documentElement.clientHeight,
-                    )
-                    console.log('[RAD][React] immediate post after click', { height, parentOrigin })
-                    window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: !latestExpanded }, parentOrigin)
-                    postHeightToWordPress(height, !latestExpanded)
-                  }
-                  if (typeof requestAnimationFrame === 'function') {
-                    requestAnimationFrame(() => requestAnimationFrame(postSoon))
+                const postSoon = () => {
+                  const doc = document
+                  const height = Math.max(
+                    doc.body.scrollHeight,
+                    doc.documentElement.scrollHeight,
+                    doc.body.offsetHeight,
+                    doc.documentElement.offsetHeight,
+                    doc.body.clientHeight,
+                    doc.documentElement.clientHeight,
+                  )
+                  if (window.self !== window.top) {
+                    console.log('[RAD][React] immediate post after click -> postMessage', { height, parentOrigin })
+                    window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: !latestExpanded }, parentOrigin || '*')
                   } else {
-                    setTimeout(postSoon, 0)
+                    console.log('[RAD][React] immediate post after click (not embedded)')
                   }
+                  // Always also POST to WordPress for observability
+                  postHeightToWordPress(height, !latestExpanded)
+                }
+                if (typeof requestAnimationFrame === 'function') {
+                  requestAnimationFrame(() => requestAnimationFrame(postSoon))
+                } else {
+                  setTimeout(postSoon, 0)
                 }
               }}>
                 {latestExpanded ? 'Tutup' : 'Lihat Semua'}
