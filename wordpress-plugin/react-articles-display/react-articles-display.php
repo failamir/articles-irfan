@@ -329,6 +329,33 @@ function react_articles_rest_register_routes() {
             ),
         )
     );
+
+    // Diagnostics: simple ping to confirm route is registered
+    register_rest_route(
+        'react-articles/v1',
+        '/ping',
+        array(
+            'methods'  => 'GET',
+            'callback' => function () {
+                return rest_ensure_response(array('ok' => true, 'time' => current_time('mysql')));
+            },
+            'permission_callback' => '__return_true',
+        )
+    );
+
+    // Diagnostics: view last received height event
+    register_rest_route(
+        'react-articles/v1',
+        '/last-height',
+        array(
+            'methods'  => 'GET',
+            'callback' => function () {
+                $last = get_transient('react_articles_last_height');
+                return rest_ensure_response(array('ok' => true, 'last' => $last));
+            },
+            'permission_callback' => '__return_true',
+        )
+    );
 }
 add_action('rest_api_init', 'react_articles_rest_register_routes');
 
