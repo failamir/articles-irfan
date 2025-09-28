@@ -1,4 +1,5 @@
 import React from 'react'
+import { API_URLS } from '../constants/api'
 
 // Shapes from WP REST API when using ?_embed
 type WPPost = {
@@ -15,7 +16,7 @@ type WPPost = {
   }
 }
 
-const API_URL = 'https://sozo.treonstudio.com//wp-json/wp/v2/posts?_embed&per_page=12'
+const API_URL = API_URLS.POSTS_WITH_EMBED
 
 type Props = {
   categoryName?: string
@@ -121,7 +122,7 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }
     setModalLoading(true)
     try {
       if (!base.content || !base.content.rendered) {
-        const res = await fetch(`https://sozo.treonstudio.com//wp-json/wp/v2/posts/${base.id}?_embed=1`)
+        const res = await fetch(API_URLS.getSinglePost(base.id))
         if (res.ok) {
           const full = await res.json()
           setModalPost(full as WPPost)
@@ -257,7 +258,7 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }
                   setModalLoading(true)
                   // If content already present, open directly; else fetch the single post for full content
                   if (!p.content || !p.content.rendered) {
-                    const res = await fetch(`https://sozo.treonstudio.com//wp-json/wp/v2/posts/${p.id}?_embed=1`)
+                    const res = await fetch(API_URLS.getSinglePost(p.id))
                     if (res.ok) {
                       const full = await res.json()
                       setModalPost(full as WPPost)

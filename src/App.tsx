@@ -1,12 +1,41 @@
 import React from 'react'
 import { Tabs } from './components/Tabs'
 import { ArticleGrid } from './components/ArticleGrid'
+import { AllArticleGrid } from './components/AllArticleGrid'
+import { CategoryCarousel } from './components/CategoryCarousel'
+import { useCategoriesAsTabs, useCategories } from './hooks/usePosts'
+import { useStore } from './store/useStore'
 
 export default function App() {
-  const [activeTab, setActiveTab] = React.useState('tab-1')
+  const [activeTab, setActiveTab] = React.useState('all')
   const [query, setQuery] = React.useState('')
-  const [latestExpanded, setLatestExpanded] = React.useState(false)
-  const [categoryExpanded, setCategoryExpanded] = React.useState(false)
+
+  // Use Zustand store
+  const {
+    isMobile,
+    setIsMobile,
+    latestExpanded,
+    setLatestExpanded,
+    categoryExpanded,
+    setCategoryExpanded
+  } = useStore()
+
+  // Get dynamic tabs from WordPress categories
+  const { tabs, isLoading: tabsLoading, error: tabsError } = useCategoriesAsTabs()
+
+  // Get all categories for carousel sections
+  const { data: categories } = useCategories()
+
+  // Set up mobile detection
+  React.useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 600)
+    }
+
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [setIsMobile])
 
   const parentOrigin = React.useMemo(() => {
     try {
@@ -54,25 +83,26 @@ export default function App() {
   }, [parentOrigin])
 
   const categoryFromTab = (id: string): string | undefined => {
-    if (id === 'tab-2') return 'Skincare Tips'
-    if (id === 'tab-3') return 'Treatment Guide'
-    if (id === 'tab-4') return 'Expert Opinion'
-    return undefined
+    if (id === 'all') return undefined // Show all articles
+
+    // Find category name from tabs
+    const tab = tabs.find(t => t.id === id)
+    return tab?.label
   }
 
   // Sync with URL hash
   React.useEffect(() => {
     const hash = window.location.hash.replace('#', '')
-    if (hash && ['tab-1','tab-2','tab-3','tab-4'].includes(hash)) {
+    if (hash && tabs.some(t => t.id === hash)) {
       setActiveTab(hash)
     }
     const onHashChange = () => {
       const h = window.location.hash.replace('#', '')
-      if (h && ['tab-1','tab-2','tab-3','tab-4'].includes(h)) setActiveTab(h)
+      if (h && tabs.some(t => t.id === h)) setActiveTab(h)
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
+  }, [tabs])
 
   React.useEffect(() => {
     if (window.location.hash.replace('#','') !== activeTab) {
@@ -82,7 +112,8 @@ export default function App() {
 
   // Reset category expanded when switching tabs
   React.useEffect(() => {
-    setCategoryExpanded(false)
+    // Note: Individual category expanded states are managed in Zustand store
+    // No need to reset here as each category has its own state
   }, [activeTab])
 
   // Listen for messages from parent (WordPress) to toggle expansion
@@ -160,12 +191,18 @@ export default function App() {
           <p className="hub-desc">Temukan artikel yang tepat untuk kebutuhan kecantikan Anda dari koleksi 200+ artikel yang ditulis oleh para expert</p>
 
           <div className="hub-controls">
-            <Tabs tabs={[
-              { id: 'tab-1', label: 'Semua Artikel' },
-              { id: 'tab-2', label: 'Skincare Tips' },
-              { id: 'tab-3', label: 'Treatment Guide' },
-              { id: 'tab-4', label: 'Expert Opinion' },
-            ]} value={activeTab} onChange={setActiveTab} />
+            {tabsLoading ? (
+              <div className="tabs-skeleton">
+                <div className="skeleton-tab"></div>
+                <div className="skeleton-tab"></div>
+                <div className="skeleton-tab"></div>
+                <div className="skeleton-tab"></div>
+              </div>
+            ) : tabsError ? (
+              <div className="tabs-error">Error loading categories</div>
+            ) : (
+              <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+            )}
 
             <form className="searchbar" role="search" onSubmit={(e) => e.preventDefault()}>
               <input
@@ -179,55 +216,34 @@ export default function App() {
           </div>
         </section>
 
-        {activeTab === 'tab-1' && (
-          <section aria-labelledby="artikel-terbaru" className="articles-section">
-            <div className="section-head">
-              <h2 id="artikel-terbaru">Artikel Terbaru</h2>
-              <a href="#" className="see-all" onClick={(e) => {
-                e.preventDefault();
-                setLatestExpanded(v => !v)
-                // Immediately post height after toggle using rAF to wait for DOM update
-                const postSoon = () => {
-                  const doc = document
-                  const height = Math.max(
-                    doc.body.scrollHeight,
-                    doc.documentElement.scrollHeight,
-                    doc.body.offsetHeight,
-                    doc.documentElement.offsetHeight,
-                    doc.body.clientHeight,
-                    doc.documentElement.clientHeight,
-                  )
-                  if (window.self !== window.top) {
-                    console.log('[RAD][React] immediate post after click -> postMessage', { height, parentOrigin })
-                    window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: !latestExpanded }, parentOrigin || '*')
-                  } else {
-                    console.log('[RAD][React] immediate post after click (not embedded)')
-                  }
-                  // Always also POST to WordPress for observability
-                  postHeightToWordPress(height, !latestExpanded)
-                }
-                if (typeof requestAnimationFrame === 'function') {
-                  requestAnimationFrame(() => requestAnimationFrame(postSoon))
-                } else {
-                  setTimeout(postSoon, 0)
-                }
-              }}>
-                {latestExpanded ? 'Tutup' : 'Lihat Semua'}
-              </a>
-            </div>
-            <ArticleGrid searchTerm={query} limit={latestExpanded ? undefined : 3} />
-          </section>
+        {activeTab === 'all' && (
+          <>
+            <section aria-labelledby="featured-articles" className="articles-section">
+              <div className="section-head">
+                <h2 id="featured-articles">Artikel Terbaru</h2>
+              </div>
+              <AllArticleGrid searchTerm={query} />
+            </section>
+
+            {/* Category Carousels */}
+            {categories?.map((category) => (
+              <CategoryCarousel
+                key={category.id}
+                categoryId={category.id}
+                categorySlug={category.slug}
+                categoryName={category.name}
+                searchTerm={query}
+              />
+            ))}
+          </>
         )}
 
-        {activeTab !== 'tab-1' && (
+        {activeTab !== 'all' && (
           <section aria-labelledby="category-section" className="articles-section fade-in">
             <div className="section-head">
               <h2 id="category-section">{categoryFromTab(activeTab)}</h2>
-              <a href="#" className="see-all" onClick={(e) => { e.preventDefault(); setCategoryExpanded(v => !v) }}>
-                {categoryExpanded ? 'Tutup' : 'Lihat Semua'}
-              </a>
             </div>
-            <ArticleGrid categoryName={categoryFromTab(activeTab)} limit={categoryExpanded ? undefined : 3} />
+            <ArticleGrid categoryName={categoryFromTab(activeTab)} searchTerm={query} />
           </section>
         )}
       </main>
