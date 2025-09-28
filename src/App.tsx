@@ -5,6 +5,7 @@ import { AllArticleGrid } from './components/AllArticleGrid'
 import { CategoryCarousel } from './components/CategoryCarousel'
 import { useCategoriesAsTabs, useCategories } from './hooks/usePosts'
 import { useStore } from './store/useStore'
+import type { WPCategory } from './services/api'
 
 export default function App() {
   const [activeTab, setActiveTab] = React.useState('all')
@@ -226,7 +227,7 @@ export default function App() {
             </section>
 
             {/* Category Carousels */}
-            {categories?.map((category) => (
+            {categories?.map((category: WPCategory) => (
               <CategoryCarousel
                 key={category.id}
                 categoryId={category.id}
