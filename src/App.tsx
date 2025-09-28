@@ -1,9 +1,12 @@
 import React from 'react'
 import { Tabs } from './components/Tabs'
 import { ArticleGrid } from './components/ArticleGrid'
+import { useCategoriesAsTabs } from './hooks/usePosts'
 
 export default function App() {
-  const [activeTab, setActiveTab] = React.useState('tab-1')
+  // Build tabs dynamically from WP categories API
+  const { tabs, isLoading: tabsLoading, error: tabsError } = useCategoriesAsTabs()
+  const [activeTab, setActiveTab] = React.useState('all')
   const [query, setQuery] = React.useState('')
   const [latestExpanded, setLatestExpanded] = React.useState(false)
   const [categoryExpanded, setCategoryExpanded] = React.useState(false)
@@ -53,32 +56,43 @@ export default function App() {
     }
   }, [parentOrigin])
 
-  const categoryFromTab = (id: string): string | undefined => {
-    if (id === 'tab-2') return 'Skincare Tips'
-    if (id === 'tab-3') return 'Treatment Guide'
-    if (id === 'tab-4') return 'Expert Opinion'
-    return undefined
+  const getCategoryNameByTab = (id: string): string | undefined => {
+    if (!tabs || !tabs.length) return undefined
+    if (id === 'all') return undefined
+    const t = tabs.find(t => t.id === id)
+    return t?.label
   }
 
-  // Sync with URL hash
+  // Sync with URL hash using dynamic tab IDs
   React.useEffect(() => {
-    const hash = window.location.hash.replace('#', '')
-    if (hash && ['tab-1','tab-2','tab-3','tab-4'].includes(hash)) {
-      setActiveTab(hash)
+    const applyHash = () => {
+      const hash = window.location.hash.replace('#', '')
+      if (!hash) return
+      // Only apply if hash exists in current tabs
+      if (tabs && tabs.some(t => t.id === hash)) {
+        setActiveTab(hash)
+      }
     }
-    const onHashChange = () => {
-      const h = window.location.hash.replace('#', '')
-      if (h && ['tab-1','tab-2','tab-3','tab-4'].includes(h)) setActiveTab(h)
-    }
+    applyHash()
+    const onHashChange = () => applyHash()
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
+  }, [tabs])
 
   React.useEffect(() => {
     if (window.location.hash.replace('#','') !== activeTab) {
       history.replaceState(null, '', `#${activeTab}`)
     }
   }, [activeTab])
+
+  // Ensure activeTab is valid when tabs change
+  React.useEffect(() => {
+    if (!tabs || tabs.length === 0) return
+    const currentValid = tabs.some(t => t.id === activeTab) || activeTab === 'all'
+    if (!currentValid) {
+      setActiveTab(tabs[0]?.id || 'all')
+    }
+  }, [tabs])
 
   // Reset category expanded when switching tabs
   React.useEffect(() => {
@@ -159,12 +173,18 @@ export default function App() {
           <p className="hub-desc">Temukan artikel yang tepat untuk kebutuhan kecantikan Anda dari koleksi 200+ artikel yang ditulis oleh para expert</p>
 
           <div className="hub-controls">
-            <Tabs tabs={[
-              { id: 'tab-1', label: 'Semua Artikel' },
-              { id: 'tab-2', label: 'Skincare Tips' },
-              { id: 'tab-3', label: 'Treatment Guide' },
-              { id: 'tab-4', label: 'Expert Opinion' },
-            ]} value={activeTab} onChange={setActiveTab} />
+            {tabsLoading ? (
+              <div className="tabs-skeleton" aria-hidden>
+                <div className="skeleton-tab" />
+                <div className="skeleton-tab" />
+                <div className="skeleton-tab" />
+                <div className="skeleton-tab" />
+              </div>
+            ) : tabsError ? (
+              <div className="tabs-error">Gagal memuat kategori</div>
+            ) : (
+              <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+            )}
 
             <form className="searchbar" role="search" onSubmit={(e: React.FormEvent) => e.preventDefault()}>
               <input
@@ -178,7 +198,7 @@ export default function App() {
           </div>
         </section>
 
-        {activeTab === 'tab-1' && (
+        {activeTab === 'all' && (
           <section aria-labelledby="artikel-terbaru" className="articles-section">
             <div className="section-head">
               <h2 id="artikel-terbaru">Artikel Terbaru</h2>
@@ -222,15 +242,15 @@ export default function App() {
           </section>
         )}
 
-        {activeTab !== 'tab-1' && (
+        {activeTab !== 'all' && (
           <section aria-labelledby="category-section" className="articles-section fade-in">
             <div className="section-head">
-              <h2 id="category-section">{categoryFromTab(activeTab)}</h2>
+              <h2 id="category-section">{getCategoryNameByTab(activeTab)}</h2>
               <a href="#" className="see-all" onClick={(e: React.MouseEvent<HTMLAnchorElement>) => { e.preventDefault(); setCategoryExpanded((v: boolean) => !v) }}>
                 {categoryExpanded ? 'Tutup' : 'Lihat Semua'}
               </a>
             </div>
-            <ArticleGrid categoryName={categoryFromTab(activeTab)} limit={categoryExpanded ? undefined : 3} />
+            <ArticleGrid categoryName={getCategoryNameByTab(activeTab)} limit={categoryExpanded ? undefined : 3} />
           </section>
         )}
       </main>
