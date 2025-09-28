@@ -22,13 +22,12 @@ type Props = {
   categoryName?: string
   limit?: number
   searchTerm?: string
-  sliderMode?: boolean
 }
 
 let CACHE: WPPost[] | null = null
 let CACHE_ERR: string | null = null
 
-export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm, sliderMode }) => {
+export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }) => {
   const [posts, setPosts] = React.useState<WPPost[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -38,9 +37,6 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm, 
   const panelRef = React.useRef<HTMLDivElement | null>(null)
   const [animOpen, setAnimOpen] = React.useState(false)
   const isDark = React.useMemo(() => new URLSearchParams(window.location.search).get('theme') === 'dark', [])
-  // Slider state
-  const [slide, setSlide] = React.useState(0)
-  const [perView, setPerView] = React.useState(3)
 
   // When modal open/close or loading changes, ask parent to resize iframe
   React.useEffect(() => {
@@ -214,226 +210,28 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm, 
     }
   }
 
-  // Compute items with filtering/limit (memoized) so hooks below can depend on it
-  const items = React.useMemo(() => {
-    let arr = posts
-    if (categoryName) {
-      arr = arr.filter((p) => {
-        const terms = p._embedded?.['wp:term']?.flat() || []
-        return terms.some(t => t.taxonomy === 'category' && t.name?.toLowerCase() === categoryName.toLowerCase())
-      })
-    }
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase().trim()
-      if (q) {
-        arr = arr.filter((p) => {
-          const title = (p.title?.rendered || '').toLowerCase()
-          const excerpt = stripHtml(p.excerpt?.rendered || '').toLowerCase()
-          return title.includes(q) || excerpt.includes(q)
-        })
-      }
-    }
-    if (limit) arr = arr.slice(0, limit)
-    return arr
-  }, [posts, categoryName, searchTerm, limit])
-
-  // Setup perView responsive for slider
-  React.useEffect(() => {
-    if (!sliderMode) return
-    const calc = () => {
-      const w = window.innerWidth
-      const pv = w >= 900 ? 3 : (w >= 600 ? 2 : 1)
-      setPerView(pv)
-    }
-    calc()
-    window.addEventListener('resize', calc)
-    return () => window.removeEventListener('resize', calc)
-  }, [sliderMode])
-
-  // Keep slide within bounds on changes
-  React.useEffect(() => {
-    if (!sliderMode) return
-    const pages = Math.max(1, Math.ceil(items.length / perView))
-    if (slide > pages - 1) setSlide(pages - 1)
-  }, [items.length, perView, sliderMode, slide])
-
   if (loading) return <p className="muted">Memuat artikel…</p>
   if (error) return <p className="muted">Terjadi kesalahan: {error}</p>
 
-  if (sliderMode) {
-    const pages = Math.max(1, Math.ceil(items.length / perView))
-    const trackWidth = `${(items.length / perView) * 100}%`
-    const itemBasis = `${100 / (pages * perView)}%` // each item basis in track
-    const translateX = `-${(slide * 100) / pages}%`
-    return (
-      <div className="slider">
-        <div className="slider-viewport">
-          <div className="slider-track" style={{ width: trackWidth, transform: `translateX(${translateX})` }}>
-            {items.map((p) => (
-              <div key={p.id} className="slider-item" style={{ flex: `0 0 ${itemBasis}` }}>
-                <article className="grid-card">
-                  {getThumb(p) ? (
-                    <img className="grid-thumb-img" src={getThumb(p)!} alt="" loading="lazy" />
-                  ) : (
-                    <div className="grid-thumb" />
-                  )}
-                  <div className="grid-body">
-                    <p className="badge">{getCategory(p)}</p>
-                    <h3 className="grid-title" dangerouslySetInnerHTML={{ __html: p.title.rendered }} />
-                    {p.excerpt?.rendered && (
-                      <p className="grid-excerpt">{stripHtml(p.excerpt.rendered).slice(0, 120)}…</p>
-                    )}
-                    <p className="grid-meta">{formatDate(p.date)} • 4 min read</p>
-                    <a
-                      className="link"
-                      href={p.link}
-                      onClick={async (e) => {
-                        try {
-                          e.preventDefault()
-                          setModalLoading(true)
-                          if (!p.content || !p.content.rendered) {
-                            const res = await fetch(`https://sozo.treonstudio.com//wp-json/wp/v2/posts/${p.id}?_embed=1`)
-                            if (res.ok) {
-                              const full = await res.json()
-                              setModalPost(full as WPPost)
-                            } else {
-                              window.location.href = p.link
-                              return
-                            }
-                          } else {
-                            setModalPost(p)
-                          }
-                        } catch (err) {
-                          window.location.href = p.link
-                          return
-                        } finally {
-                          setModalLoading(false)
-                        }
-                        try {
-                          const doc = document
-                          const height = Math.max(
-                            doc.body.scrollHeight,
-                            doc.documentElement.scrollHeight,
-                            doc.body.offsetHeight,
-                            doc.documentElement.offsetHeight,
-                            doc.body.clientHeight,
-                            doc.documentElement.clientHeight,
-                          )
-                          if (window.self !== window.top) {
-                            window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: true }, '*')
-                          }
-                        } catch {}
-                      }}
-                    >
-                      Baca selengkapnya
-                    </a>
-                  </div>
-                </article>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="slider-controls">
-          <div className="slider-dots" role="tablist" aria-label="Slider pagination">
-            {Array.from({ length: pages }).map((_, i) => (
-              <button
-                key={i}
-                className={`dot ${i === slide ? 'active' : ''}`}
-                aria-label={`Halaman ${i + 1}`}
-                aria-selected={i === slide}
-                onClick={() => setSlide(i)}
-              />
-            ))}
-          </div>
-          <div className="slider-arrows">
-            <button className="arrow" aria-label="Sebelumnya" disabled={slide <= 0} onClick={() => setSlide((s) => Math.max(0, s - 1))}>←</button>
-            <button className="arrow" aria-label="Berikutnya" disabled={slide >= pages - 1} onClick={() => setSlide((s) => Math.min(pages - 1, s + 1))}>→</button>
-          </div>
-        </div>
-        {/** Keep modal rendering below so it works in slider too */}
-        {modalPost && (
-          <div
-            className="modal-backdrop"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setModalPost(null)
-            }}
-            style={{
-              position: 'fixed', inset: 0,
-              background: isDark ? '#0b0f14' : '#ffffff',
-              display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', zIndex: 9999,
-              opacity: animOpen ? 1 : 0,
-              transition: 'opacity 180ms ease',
-            }}
-          >
-            <div
-              className="modal-panel"
-              ref={panelRef}
-              style={{
-                background: isDark ? '#0b0f14' : '#fff', width: '100%', height: '100vh',
-                color: isDark ? '#e6edf3' : '#111827',
-                overflow: 'auto', WebkitOverflowScrolling: 'touch' as any,
-                transform: animOpen ? 'translateY(0)' : 'translateY(8px)',
-                transition: 'transform 220ms ease',
-              }}
-            >
-              <div style={{ position: 'sticky', top: 0, zIndex: 2, background: isDark ? '#0b0f14' : '#fff', borderBottom: `1px solid ${isDark ? '#1f2937' : '#e5e7eb'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', gap: 8 }}>
-                  <h3 style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: modalPost.title?.rendered || 'Artikel' }} />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => gotoSibling(-1)} disabled={findIndexById(modalPost.id) <= 0}
-                      style={{ background: 'transparent', border: `1px solid ${isDark ? '#1f2937' : '#e5e7eb'}`, borderRadius: 8, padding: '6px 10px', fontSize: 14, cursor: 'pointer', color: 'inherit' }}>Sebelumnya</button>
-                    <button onClick={() => gotoSibling(1)} disabled={findIndexById(modalPost.id) >= posts.length - 1}
-                      style={{ background: 'transparent', border: `1px solid ${isDark ? '#1f2937' : '#e5e7eb'}`, borderRadius: 8, padding: '6px 10px', fontSize: 14, cursor: 'pointer', color: 'inherit' }}>Berikutnya</button>
-                    <button onClick={shareCurrent}
-                      style={{ background: isDark ? '#111827' : '#f3f4f6', border: `1px solid ${isDark ? '#1f2937' : '#e5e7eb'}`, borderRadius: 8, padding: '6px 10px', fontSize: 14, cursor: 'pointer', color: 'inherit' }}>Bagikan</button>
-                    <button
-                      aria-label="Tutup"
-                      onClick={() => setModalPost(null)}
-                      style={{ background: 'transparent', border: `1px solid ${isDark ? '#1f2937' : '#e5e7eb'}`, borderRadius: 8, padding: '6px 10px', fontSize: 14, cursor: 'pointer', color: 'inherit' }}
-                    >Tutup ✕</button>
-                  </div>
-                </div>
-              </div>
-              <div style={{ padding: 16, maxWidth: 860, margin: '0 auto' }}>
-                {modalLoading ? (
-                  <p>Memuat…</p>
-                ) : (
-                  <div>
-                    {getThumb(modalPost) && (
-                      <img src={getThumb(modalPost)!} alt="" style={{ width: '100%', borderRadius: 8, marginBottom: 12 }} onLoad={() => setModalLoading(false)} />
-                    )}
-                    <p className="badge" style={{ marginBottom: 8 }}>{getCategory(modalPost)}</p>
-                    <p className="grid-meta" style={{ marginTop: 0 }}>{formatDate(modalPost.date)} • 4 min read</p>
-                    <div className="modal-content" style={{ lineHeight: 1.7 }}
-                      dangerouslySetInnerHTML={{ __html: (modalPost.content?.rendered || modalPost.excerpt?.rendered || '') }} />
-                    {/* Content styles */}
-                    <style>
-                      {`
-                      .modal-content h1,.modal-content h2,.modal-content h3{margin:1.2em 0 .6em}
-                      .modal-content p{margin:0 0 1em}
-                      .modal-content img{max-width:100%;height:auto;border-radius:8px;margin:12px 0}
-                      .modal-content ul{padding-left:1.25rem;margin:0 0 1em}
-                      .modal-content ol{padding-left:1.25rem;margin:0 0 1em}
-                      .modal-content blockquote{border-left:4px solid #e5e7eb;padding:.5em 1em;margin:1em 0;color:#4b5563}
-                      ${isDark ? `.modal-content blockquote{border-left-color:#374151;color:#9ca3af}` : ''}
-                      .modal-content a{color:#2563eb;text-decoration:underline}
-                      ${isDark ? `.modal-content a{color:#60a5fa}` : ''}
-                      `}
-                    </style>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        {toast && (
-          <div style={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#fff', borderRadius: 9999, padding: '8px 14px', fontSize: 14, zIndex: 10000, opacity: 0.95 }}>{toast}</div>
-        )}
-      </div>
-    )
+  // Filter and limit
+  let items = posts
+  if (categoryName) {
+    items = posts.filter((p) => {
+      const terms = p._embedded?.['wp:term']?.flat() || []
+      return terms.some(t => t.taxonomy === 'category' && t.name?.toLowerCase() === categoryName.toLowerCase())
+    })
   }
+  if (searchTerm) {
+    const q = searchTerm.toLowerCase().trim()
+    if (q) {
+      items = items.filter((p) => {
+        const title = (p.title?.rendered || '').toLowerCase()
+        const excerpt = stripHtml(p.excerpt?.rendered || '').toLowerCase()
+        return title.includes(q) || excerpt.includes(q)
+      })
+    }
+  }
+  if (limit) items = items.slice(0, limit)
 
   return (
     <div className="grid">
@@ -558,6 +356,7 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm, 
                   <p className="grid-meta" style={{ marginTop: 0 }}>{formatDate(modalPost.date)} • 4 min read</p>
                   <div className="modal-content" style={{ lineHeight: 1.7 }}
                     dangerouslySetInnerHTML={{ __html: (modalPost.content?.rendered || modalPost.excerpt?.rendered || '') }} />
+                  {/* Content styles */}
                   <style>
                     {`
                     .modal-content h1,.modal-content h2,.modal-content h3{margin:1.2em 0 .6em}
@@ -583,4 +382,3 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm, 
     </div>
   )
 }
-
