@@ -87,6 +87,28 @@ export const postsApi = {
     return response.data
   },
 
+  // Get ALL posts by paginating through WordPress REST API (per_page max 100)
+  getAllPosts: async (params?: PostsQueryParams): Promise<WPPost[]> => {
+    const perPage = Math.min(100, params?.per_page || 100)
+    let page = 1
+    let all: WPPost[] = []
+    // Ensure _embed true by default
+    const baseParams = { _embed: true, ...params, per_page: perPage }
+
+    // Loop until a page returns less than perPage
+    // Also guard with a hard cap of 50 pages to avoid infinite loops
+    for (let i = 0; i < 50; i++) {
+      const response = await apiClient.get(`${API_CONFIG.WP_JSON_BASE}${API_CONFIG.POSTS_ENDPOINT}`, {
+        params: { ...baseParams, page },
+      })
+      const items: WPPost[] = response.data
+      all = all.concat(items)
+      if (!Array.isArray(items) || items.length < perPage) break
+      page += 1
+    }
+    return all
+  },
+
   // Get single post by ID
   getSinglePost: async (id: number): Promise<WPPost> => {
     const response = await apiClient.get(`${API_CONFIG.WP_JSON_BASE}${API_CONFIG.POSTS_ENDPOINT}/${id}`, {
@@ -122,6 +144,25 @@ export const postsApi = {
     })
 
     return response.data
+  },
+
+  // Search ALL posts (paginate) for a query
+  searchAllPosts: async (query: string, params?: PostsQueryParams): Promise<WPPost[]> => {
+    const perPage = Math.min(100, params?.per_page || 100)
+    let page = 1
+    let all: WPPost[] = []
+    const baseParams = { _embed: true, search: query, ...params, per_page: perPage }
+
+    for (let i = 0; i < 50; i++) {
+      const response = await apiClient.get(`${API_CONFIG.WP_JSON_BASE}${API_CONFIG.POSTS_ENDPOINT}`, {
+        params: { ...baseParams, page },
+      })
+      const items: WPPost[] = response.data
+      all = all.concat(items)
+      if (!Array.isArray(items) || items.length < perPage) break
+      page += 1
+    }
+    return all
   },
 }
 

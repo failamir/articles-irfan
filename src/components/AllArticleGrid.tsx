@@ -4,7 +4,7 @@ import { Navigation, Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
-import { usePosts, usePost, useFilteredPosts } from '../hooks/usePosts'
+import { useAllPosts, usePost, useSearchAllPosts, useFilteredPosts } from '../hooks/usePosts'
 import { WPPost } from '../services/api'
 import { useStore } from '../store/useStore'
 
@@ -17,10 +17,24 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
   // Use Zustand store
   const { isMobile, modalPostId, setModalPostId } = useStore()
 
-  // React Query for posts - fetch different amounts based on device
-  const { data: allPosts, isLoading: loading, error } = usePosts({
-    per_page: isMobile ? 3 : 12 // 3 items on mobile, 12 on desktop
-  })
+  // React Query for posts: fetch ALL on each filter change
+  // If search term provided, use server-side search with pagination; otherwise fetch all posts
+  const isSearching = !!(searchTerm && searchTerm.trim().length > 0)
+  const {
+    data: searchedPosts,
+    isLoading: searching,
+    error: searchError,
+  } = useSearchAllPosts(isSearching ? searchTerm : undefined)
+  const {
+    data: allPosts,
+    isLoading: loadingAll,
+    error: allError,
+  } = useAllPosts(
+    // Include a forcing key so category changes cause refetch; this extra key will be sent as a query param but ignored by WP
+    categoryName ? ({ _embed: true, per_page: 100, __forceKey: categoryName } as any) : ({ _embed: true, per_page: 100 } as any)
+  )
+  const loading = isSearching ? searching : loadingAll
+  const error = isSearching ? searchError : allError
 
   // React Query for single post modal
   const { data: modalPost, isLoading: modalLoading } = usePost(modalPostId || 0)
@@ -31,7 +45,6 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
 
   // Carousel settings - responsive
   const ITEMS_PER_SLIDE = isMobile ? 1 : 3 // 1 item per slide on mobile, 3 on desktop
-  const MAX_ITEMS = isMobile ? 3 : 9 // Max 3 items on mobile, 9 on desktop
 
   // When modal open/close or loading changes, ask parent to resize iframe
   React.useEffect(() => {
@@ -105,11 +118,12 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
     setTimeout(() => setToast(null), 2000)
   }
 
-  // Use filtered posts
-  const items = useFilteredPosts(allPosts, {
+  // Choose source list: searched results (from API) when searching, else all posts (from API)
+  const sourcePosts = isSearching ? searchedPosts : allPosts
+  // Apply client-side category filter on top of API results, without limiting the count
+  const items = useFilteredPosts(sourcePosts, {
     categoryName,
-    searchTerm,
-    limit: MAX_ITEMS,
+    searchTerm: undefined, // search already applied on server when isSearching
   })
 
   const findIndexById = (id: number) => items.findIndex(x => x.id === id)

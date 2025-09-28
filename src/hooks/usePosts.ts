@@ -8,6 +8,8 @@ export const QUERY_KEYS = {
   POST: 'post',
   POSTS_BY_CATEGORY: 'posts-by-category',
   SEARCH_POSTS: 'search-posts',
+  POSTS_ALL: 'posts-all',
+  SEARCH_POSTS_ALL: 'search-posts-all',
   CATEGORIES: 'categories',
   CATEGORY: 'category',
 } as const
@@ -21,6 +23,18 @@ export const usePosts = (params?: PostsQueryParams): UseQueryResult<WPPost[], Er
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  })
+}
+
+// Fetch ALL posts (paginate across pages)
+export const useAllPosts = (params?: PostsQueryParams): UseQueryResult<WPPost[], Error> => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.POSTS_ALL, params],
+    queryFn: () => postsApi.getAllPosts(params),
+    // Keep a short staleTime to allow quick refetches on filters, but cache for usability
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
   })
 }
 
@@ -60,6 +74,22 @@ export const useSearchPosts = (
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
+  })
+}
+
+// Fetch ALL search results (paginate) and optionally combine with extra params (e.g., categories)
+export const useSearchAllPosts = (
+  query?: string,
+  params?: PostsQueryParams
+): UseQueryResult<WPPost[], Error> => {
+  const enabled = !!query && query.trim().length > 0
+  return useQuery({
+    queryKey: [QUERY_KEYS.SEARCH_POSTS_ALL, query, params],
+    queryFn: () => postsApi.searchAllPosts(query!, params),
+    enabled,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
   })
 }
 
