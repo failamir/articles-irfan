@@ -25,6 +25,7 @@ function react_articles_clean_shortcode($atts)
     $atts = shortcode_atts(array(
         'width' => '100%',
         'height' => '70vh',
+        'expanded_height' => '1200px',
         'theme' => 'light',
         'category' => ''
     ), $atts, 'react_articles_clean');
