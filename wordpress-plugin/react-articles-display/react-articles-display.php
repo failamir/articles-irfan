@@ -88,13 +88,13 @@ function react_articles_shortcode($atts)
                     data-iframe-id="<?php echo esc_attr($iframe_id); ?>"
                     data-collapsed-height="<?php echo esc_attr($atts['height']); ?>"
                     data-expanded-height="<?php echo esc_attr($atts['expanded_height']); ?>">
-                    Lihat Semua
+                    <!-- Lihat Semua -->
                 </button>
             </div>
         </div>
         <?php if (current_user_can('edit_posts')): ?>
             <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
-                <small>Shortcode: <code>[react_articles height="<?php echo esc_attr($atts['height']); ?>" theme="<?php echo esc_attr($atts['theme']); ?>"]</code></small>
+                <!-- <small>Shortcode: <code>[react_articles height="<?php echo esc_attr($atts['height']); ?>" theme="<?php echo esc_attr($atts['theme']); ?>"]</code></small> -->
             </div>
         <?php endif; ?>
     </div>
@@ -313,7 +313,8 @@ register_deactivation_hook(__FILE__, 'react_articles_deactivate');
 /**
  * REST API: Receive height events from React app
  */
-function react_articles_rest_register_routes() {
+function react_articles_rest_register_routes()
+{
     register_rest_route(
         'react-articles/v1',
         '/height',
@@ -359,7 +360,8 @@ function react_articles_rest_register_routes() {
 }
 add_action('rest_api_init', 'react_articles_rest_register_routes');
 
-function react_articles_rest_height_handler(WP_REST_Request $request) {
+function react_articles_rest_height_handler(WP_REST_Request $request)
+{
     $height = intval($request->get_param('height'));
     $is_expanded = filter_var($request->get_param('isExpanded'), FILTER_VALIDATE_BOOLEAN);
     $iframe_id = sanitize_text_field($request->get_param('iframeId'));
@@ -390,7 +392,8 @@ function react_articles_rest_height_handler(WP_REST_Request $request) {
 }
 
 // Basic CORS for our namespace (allow POST from the React app origin)
-function react_articles_rest_cors($served, $result, $request, $server) {
+function react_articles_rest_cors($served, $result, $request, $server)
+{
     $route = $request->get_route();
     if (strpos($route, '/react-articles/v1/') === 0) {
         $origin = isset($_SERVER['HTTP_ORIGIN']) ? sanitize_text_field($_SERVER['HTTP_ORIGIN']) : '*';
