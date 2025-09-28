@@ -82,15 +82,6 @@ function react_articles_shortcode($atts)
                 loading="lazy"
                 title="Daftar Artikel"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
-            <div class="react-articles-controls" style="text-align: center; padding: 10px 0; background: #f8f9fa; border-top: 1px solid #e5e7eb;">
-                <button class="expand-iframe-btn"
-                    style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500;"
-                    data-iframe-id="<?php echo esc_attr($iframe_id); ?>"
-                    data-collapsed-height="<?php echo esc_attr($atts['height']); ?>"
-                    data-expanded-height="<?php echo esc_attr($atts['expanded_height']); ?>">
-                    <!-- Lihat Semua -->
-                </button>
-            </div>
         </div>
         <?php if (current_user_can('edit_posts')): ?>
             <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
