@@ -17,6 +17,8 @@ type WPPost = {
 }
 
 const API_URL = API_URLS.POSTS_WITH_EMBED
+// Feature toggle: set to true to use in-app modal reader; false to open posts in a new tab
+const ENABLE_MODAL = false
 
 type Props = {
   categoryName?: string
@@ -252,7 +254,11 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }
             <a
               className="link"
               href={p.link}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={async (e) => {
+                // If modal feature is disabled, let the default behavior open a new tab
+                if (!ENABLE_MODAL) return
                 try {
                   e.preventDefault()
                   setModalLoading(true)
@@ -264,7 +270,7 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }
                       setModalPost(full as WPPost)
                     } else {
                       // Fallback: open external if fetch fails
-                      window.location.href = p.link
+                      window.open(p.link, '_blank', 'noopener,noreferrer')
                       return
                     }
                   } else {
@@ -272,7 +278,7 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }
                   }
                 } catch (err) {
                   // If anything goes wrong, fall back to navigating
-                  window.location.href = p.link
+                  window.open(p.link, '_blank', 'noopener,noreferrer')
                   return
                 } finally {
                   setModalLoading(false)

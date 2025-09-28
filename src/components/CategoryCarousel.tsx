@@ -18,6 +18,9 @@ type Props = {
 export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, categoryName, searchTerm }) => {
   const { isMobile, categoryExpanded, setCategoryExpanded, setModalPostId } = useStore()
 
+  // Feature toggle: set to true to use in-app modal reader; false to open posts in a new tab
+  const ENABLE_MODAL = false
+
   // Get expansion state for this specific category
   const isExpanded = categoryExpanded[categorySlug] || false
 
@@ -102,7 +105,10 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
         <a
           className="link"
           href={p.link}
+          target="_blank"
+          rel="noopener noreferrer"
           onClick={(e) => {
+            if (!ENABLE_MODAL) return
             e.preventDefault()
             setModalPostId(p.id)
           }}

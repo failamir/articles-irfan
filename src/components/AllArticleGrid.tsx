@@ -17,6 +17,9 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
   // Use Zustand store
   const { isMobile, modalPostId, setModalPostId } = useStore()
 
+  // Feature toggle: set to true to use in-app modal reader; false to open posts in a new tab
+  const ENABLE_MODAL = false
+
   // React Query for posts - fetch different amounts based on device
   const { data: allPosts, isLoading: loading, error } = usePosts({
     per_page: isMobile ? 3 : 12 // 3 items on mobile, 12 on desktop
@@ -351,12 +354,15 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
         <a
           className="link"
           href={p.link}
+          target="_blank"
+          rel="noopener noreferrer"
           onClick={async (e) => {
+            if (!ENABLE_MODAL) return
             try {
               e.preventDefault()
               setModalPostId(p.id)
             } catch (err) {
-              window.location.href = p.link
+              window.open(p.link, '_blank', 'noopener,noreferrer')
               return
             }
             try {
