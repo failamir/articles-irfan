@@ -37,12 +37,18 @@ if (!function_exists('add_action')) {
  */
 function react_articles_shortcode($atts)
 {
-    // Atribut default
+    // Atribut default (ambil dari Settings jika ada)
+    $options = get_option('react_articles_options', array());
+    $default_height = isset($options['height']) && $options['height'] !== '' ? $options['height'] : '70vh';
+    $default_theme = isset($options['theme']) && in_array(strtolower($options['theme']), array('light', 'dark'))
+        ? strtolower($options['theme'])
+        : 'light';
+
     $atts = shortcode_atts(array(
         'width' => '100%',
-        'height' => '600px',
-        'expanded_height' => '1200px',
-        'theme' => 'light',
+        'height' => $default_height,
+        'expanded_height' => '100vh',
+        'theme' => $default_theme,
         'category' => ''
     ), $atts, 'react_articles');
 
@@ -216,7 +222,8 @@ function react_articles_options_page()
         <div class="card">
             <h2>Shortcode Examples</h2>
             <p>Basic usage: <code>[react_articles]</code></p>
-            <p>With custom height: <code>[react_articles height="600px"]</code></p>
+            <p>With custom height (viewport): <code>[react_articles height="70vh"]</code></p>
+            <p>With custom height (pixels): <code>[react_articles height="800px"]</code></p>
             <p>With dark theme: <code>[react_articles theme="dark"]</code></p>
             <p>Filter by category: <code>[react_articles category="kesehatan"]</code></p>
         </div>
@@ -261,7 +268,9 @@ function react_articles_section_text()
 function react_articles_height_input()
 {
     $options = get_option('react_articles_options');
-    echo "<input id='react_articles_default_height' name='react_articles_options[height]' size='40' type='text' value='{$options['height']}' placeholder='800px' />";
+    $value = isset($options['height']) && $options['height'] !== '' ? $options['height'] : '70vh';
+    echo "<input id='react_articles_default_height' name='react_articles_options[height]' size='40' type='text' value='" . esc_attr($value) . "' placeholder='70vh' />";
+    echo '<p class="description">Supports units like px or vh. Example: 70vh for responsive height.</p>';
 }
 
 function react_articles_theme_input()
@@ -284,7 +293,7 @@ function react_articles_activate()
     // Set default options
     if (false === get_option('react_articles_options')) {
         $default_options = array(
-            'height' => '800px',
+            'height' => '70vh',
             'theme' => 'light'
         );
         add_option('react_articles_options', $default_options);
