@@ -1,6 +1,5 @@
 import React from 'react'
 import { Tabs } from './components/Tabs'
-import { ArticleGrid } from './components/ArticleGrid'
 import { AllArticleGrid } from './components/AllArticleGrid'
 import { useCategoriesAsTabs, useCategories } from './hooks/usePosts'
 import { useStore } from './store/useStore'
@@ -240,10 +239,9 @@ export default function App() {
                 Lihat Semua
               </a>
             </div>
-            <ArticleGrid
-              categoryId={categories?.find(c => c.slug === activeTab)?.id}
+            <AllArticleGrid
+              categoryName={categories?.find(c => c.slug === activeTab)?.name || categoryFromTab(activeTab)}
               searchTerm={query}
-              limit={3}
             />
           </section>
         )}
