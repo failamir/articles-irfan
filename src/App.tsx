@@ -135,7 +135,7 @@ export default function App() {
       if (event.data && typeof event.data === 'object') {
         if (event.data.type === 'TOGGLE_EXPAND') {
           console.log('[RAD][React] toggling latestExpanded via parent request')
-          setLatestExpanded(prev => !prev)
+          setLatestExpanded(!latestExpanded)
         }
         if (event.data.type === 'IFRAME_READY') {
           // Parent indicates iframe wrapper is ready; send current height

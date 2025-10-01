@@ -88,7 +88,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
   React.useEffect(() => {
     if (!modalPost) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setModalPost(null)
+      if (e.key === 'Escape') setModalPostId(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -202,7 +202,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
             <SkeletonCard key={index} />
           ))}
         </div>
-        <style jsx>{`
+        <style>{`
           .carousel-container {
             position: relative;
             margin: 16px 0;
@@ -473,7 +473,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
               ) : (
                 <div>
                   {getThumb(modalPost) && (
-                    <img src={getThumb(modalPost)!} alt="" style={{ width: '100%', borderRadius: 8, marginBottom: 12 }} onLoad={() => setModalLoading(false)} />
+                    <img src={getThumb(modalPost)!} alt="" style={{ width: '100%', borderRadius: 8, marginBottom: 12 }} />
                   )}
                   <p className="badge" style={{ marginBottom: 8 }}>{getCategory(modalPost)}</p>
                   <p className="carousel-meta" style={{ marginTop: 0 }}>{formatDate(modalPost.date)} • 4 min read</p>
@@ -502,7 +502,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
         <div style={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#fff', borderRadius: 9999, padding: '8px 14px', fontSize: 14, zIndex: 10000, opacity: 0.95 }}>{toast}</div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .carousel-container {
           position: relative;
           margin: 16px 0;

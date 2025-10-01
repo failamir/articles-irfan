@@ -133,7 +133,7 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
             ))}
           </div>
         </div>
-        <style jsx>{`
+        <style>{`
           .category-section {
             margin: 24px 0;
           }
@@ -302,7 +302,7 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .category-section {
           margin: 0 0 3rem 0;
         }
@@ -624,7 +624,7 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
         }
         
         }
-      `}</style>
+      </style>
     </section>
   )
 }
