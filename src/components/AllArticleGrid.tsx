@@ -22,7 +22,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
 
   // React Query for posts - fetch different amounts based on device
   const { data: allPosts, isLoading: loading, error } = usePosts({
-    per_page: isMobile ? 3 : 12 // 3 items on mobile, 12 on desktop
+    per_page: isMobile ? 10 : 10 // 3 items on mobile, 12 on desktop
   })
 
   // React Query for single post modal
@@ -328,15 +328,8 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
     return <p className="muted">Terjadi kesalahan: {error.message}</p>
   }
 
-  // Calculate total slides (3 items per slide)
-  const totalSlides = Math.ceil(items.length / ITEMS_PER_SLIDE)
-  const needsCarousel = items.length > ITEMS_PER_SLIDE // Only show carousel if more than 3 items
-
-  // Group items into slides
-  const slides = []
-  for (let i = 0; i < totalSlides; i++) {
-    slides.push(items.slice(i * ITEMS_PER_SLIDE, (i + 1) * ITEMS_PER_SLIDE))
-  }
+  // Determine if carousel needed (more than visible items)
+  const needsCarousel = items.length > ITEMS_PER_SLIDE
 
   const renderArticleCard = (p: WPPost) => (
     <article key={p.id} className="carousel-card">
@@ -392,8 +385,8 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
       {needsCarousel ? (
         <Swiper
           modules={[Navigation, Pagination]}
-          spaceBetween={0}
-          slidesPerView={1}
+          spaceBetween={16}
+          slidesPerView={isMobile ? 1 : 3}
           allowTouchMove={true}
           navigation={{
             nextEl: '.swiper-button-next-custom',
@@ -405,11 +398,9 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
           }}
           className="articles-swiper"
         >
-          {slides.map((slideItems, slideIndex) => (
-            <SwiperSlide key={slideIndex}>
-              <div className="slide-grid">
-                {slideItems.map(renderArticleCard)}
-              </div>
+          {items.map((p) => (
+            <SwiperSlide key={p.id}>
+              {renderArticleCard(p)}
             </SwiperSlide>
           ))}
         </Swiper>

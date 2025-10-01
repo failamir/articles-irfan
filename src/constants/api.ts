@@ -6,7 +6,7 @@ export const API_CONFIG = {
   CATEGORIES_ENDPOINT: '/categories',
   DEFAULT_PARAMS: {
     _embed: true,
-    per_page: 12
+    per_page: 10
   }
 } as const
 

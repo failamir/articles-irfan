@@ -1,38 +1,29 @@
 import React from 'react'
 import { API_URLS } from '../constants/api'
+import { usePosts, usePostsByCategory, useFilteredPosts } from '../hooks/usePosts'
+import type { WPPost } from '../services/api'
 
-// Shapes from WP REST API when using ?_embed
-type WPPost = {
-  id: number
-  link: string
-  date?: string
-  title: { rendered: string }
-  excerpt?: { rendered: string }
-  content?: { rendered: string }
-  categories?: number[]
-  _embedded?: {
-    'wp:featuredmedia'?: Array<{ source_url?: string }>
-    'wp:term'?: Array<Array<{ taxonomy: string; name: string }>>
-  }
-}
-
-const API_URL = API_URLS.POSTS_WITH_EMBED
 // Feature toggle: set to true to use in-app modal reader; false to open posts in a new tab
 const ENABLE_MODAL = false
 
 type Props = {
+  categoryId?: number
   categoryName?: string
   limit?: number
   searchTerm?: string
 }
 
-let CACHE: WPPost[] | null = null
-let CACHE_ERR: string | null = null
+export const ArticleGrid: React.FC<Props> = ({ categoryId, categoryName, limit, searchTerm }) => {
+  // Data fetching via React Query
+  const {
+    data: apiPosts,
+    isLoading: loading,
+    error,
+  } = categoryId
+    ? usePostsByCategory(categoryId, { per_page: 10 })
+    : usePosts({ per_page: 10 })
 
-export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }) => {
-  const [posts, setPosts] = React.useState<WPPost[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
+  const posts = useFilteredPosts(apiPosts, { categoryName: categoryId ? undefined : categoryName, searchTerm, limit: undefined })
   const [modalPost, setModalPost] = React.useState<WPPost | null>(null)
   const [modalLoading, setModalLoading] = React.useState(false)
   const [toast, setToast] = React.useState<string | null>(null)
@@ -161,32 +152,6 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }
     } catch {}
   }
 
-  React.useEffect(() => {
-    const ctrl = new AbortController()
-    const load = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        if (!CACHE && !CACHE_ERR) {
-          const res = await fetch(API_URL, { signal: ctrl.signal })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          CACHE = await res.json()
-        }
-        if (CACHE_ERR) throw new Error(CACHE_ERR)
-        setPosts(CACHE || [])
-      } catch (e: any) {
-        if (e.name !== 'AbortError') {
-          const msg = e.message || 'Gagal memuat artikel'
-          CACHE_ERR = msg
-          setError(msg)
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-    return () => ctrl.abort()
-  }, [])
 
   const getThumb = (p: WPPost) => p._embedded?.['wp:featuredmedia']?.[0]?.source_url
   const getCategory = (p: WPPost) => {
@@ -213,27 +178,10 @@ export const ArticleGrid: React.FC<Props> = ({ categoryName, limit, searchTerm }
   }
 
   if (loading) return <p className="muted">Memuat artikel…</p>
-  if (error) return <p className="muted">Terjadi kesalahan: {error}</p>
+  if (error) return <p className="muted">Terjadi kesalahan: {error.message}</p>
 
-  // Filter and limit
-  let items = posts
-  if (categoryName) {
-    items = posts.filter((p) => {
-      const terms = p._embedded?.['wp:term']?.flat() || []
-      return terms.some(t => t.taxonomy === 'category' && t.name?.toLowerCase() === categoryName.toLowerCase())
-    })
-  }
-  if (searchTerm) {
-    const q = searchTerm.toLowerCase().trim()
-    if (q) {
-      items = items.filter((p) => {
-        const title = (p.title?.rendered || '').toLowerCase()
-        const excerpt = stripHtml(p.excerpt?.rendered || '').toLowerCase()
-        return title.includes(q) || excerpt.includes(q)
-      })
-    }
-  }
-  if (limit) items = items.slice(0, limit)
+  // Apply client-side limit last
+  const items = (limit ? posts.slice(0, limit) : posts)
 
   return (
     <div className="grid">

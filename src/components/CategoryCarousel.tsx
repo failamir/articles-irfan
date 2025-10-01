@@ -26,12 +26,12 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
 
   // Fetch posts for this category
   const { data: allPosts, isLoading: loading, error } = usePostsByCategory(categoryId, {
-    per_page: 3 // Only fetch 3 items for category sections
+    per_page: 10 // Only fetch 3 items for category sections
   })
 
   // Carousel settings - responsive
   const ITEMS_PER_SLIDE = isMobile ? 1 : 3
-  const MAX_ITEMS = 3 // Maximum 3 items for category sections
+  const MAX_ITEMS = 10 // Maximum 3 items for category sections
 
   // Use filtered posts (for search)
   const items = useFilteredPosts(allPosts, {

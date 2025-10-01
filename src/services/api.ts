@@ -76,7 +76,7 @@ export const postsApi = {
   getPosts: async (params?: PostsQueryParams): Promise<WPPost[]> => {
     const defaultParams = {
       _embed: true,
-      per_page: 12,
+      per_page: 10,
       ...params,
     }
 
@@ -101,7 +101,7 @@ export const postsApi = {
     const response = await apiClient.get(`${API_CONFIG.WP_JSON_BASE}${API_CONFIG.POSTS_ENDPOINT}`, {
       params: {
         _embed: true,
-        per_page: 12,
+        per_page: 10,
         categories: categoryId, // WordPress expects category ID (integer)
         ...params,
       },
@@ -115,7 +115,7 @@ export const postsApi = {
     const response = await apiClient.get(`${API_CONFIG.WP_JSON_BASE}${API_CONFIG.POSTS_ENDPOINT}`, {
       params: {
         _embed: true,
-        per_page: 12,
+        per_page: 10,
         search: query,
         ...params,
       },
@@ -130,7 +130,7 @@ export const categoriesApi = {
   // Get all categories
   getCategories: async (params?: { per_page?: number; hide_empty?: boolean }): Promise<WPCategory[]> => {
     const defaultParams = {
-      per_page: 100, // Get all categories
+      per_page: 10, // Get all categories
       hide_empty: true, // Only show categories with posts
       ...params,
     }

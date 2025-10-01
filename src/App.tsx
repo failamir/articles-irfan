@@ -2,7 +2,6 @@ import React from 'react'
 import { Tabs } from './components/Tabs'
 import { ArticleGrid } from './components/ArticleGrid'
 import { AllArticleGrid } from './components/AllArticleGrid'
-import { CategoryCarousel } from './components/CategoryCarousel'
 import { useCategoriesAsTabs, useCategories } from './hooks/usePosts'
 import { useStore } from './store/useStore'
 
@@ -220,103 +219,32 @@ export default function App() {
         </section>
 
         {activeTab === 'all' && (
-          <>
-            <section aria-labelledby="featured-articles" className="articles-section">
-              <div className="section-head">
-                <h2 id="featured-articles">Artikel Terbaru</h2>
-                <a
-                  href="#"
-                  className="see-all"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setLatestExpanded(!latestExpanded)
-                    const postSoon = () => {
-                      const doc = document
-                      const height = Math.max(
-                        doc.body.scrollHeight,
-                        doc.documentElement.scrollHeight,
-                        doc.body.offsetHeight,
-                        doc.documentElement.offsetHeight,
-                        doc.body.clientHeight,
-                        doc.documentElement.clientHeight,
-                      )
-                      if (window.self !== window.top) {
-                        console.log('[RAD][React] immediate post after click -> postMessage', { height, parentOrigin })
-                        window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: !latestExpanded }, parentOrigin || '*')
-                      } else {
-                        console.log('[RAD][React] immediate post after click (not embedded)')
-                      }
-                      postHeightToWordPress(height, !latestExpanded)
-                    }
-                    if (typeof requestAnimationFrame === 'function') {
-                      requestAnimationFrame(() => requestAnimationFrame(postSoon))
-                    } else {
-                      setTimeout(postSoon, 0)
-                    }
-                  }}
-                >
-                  {latestExpanded ? 'Tutup' : 'Lihat Semua'}
-                </a>
-              </div>
-              {latestExpanded ? (
-                <ArticleGrid searchTerm={query} />
-              ) : (
-                <AllArticleGrid searchTerm={query} />
-              )}
-            </section>
-
-            {/* Category Carousels */}
-            {categories?.map((category) => (
-              <CategoryCarousel
-                key={category.id}
-                categoryId={category.id}
-                categorySlug={category.slug}
-                categoryName={category.name}
-                searchTerm={query}
-              />
-            ))}
-          </>
+          <section aria-labelledby="featured-articles" className="articles-section">
+            <div className="section-head">
+              <h2 id="featured-articles">Artikel Terbaru</h2>
+            </div>
+            <AllArticleGrid searchTerm={query} />
+          </section>
         )}
 
         {activeTab !== 'all' && (
           <section aria-labelledby="category-section" className="articles-section fade-in">
             <div className="section-head">
-              <h2 id="category-section">{categoryFromTab(activeTab)}</h2>
+              <h2 id="category-section">{categories?.find(c => c.slug === activeTab)?.name || categoryFromTab(activeTab)}</h2>
               <a
-                href="#"
+                href={`https://sozo.treonstudio.com/category/${activeTab}`}
                 className="see-all"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setCategoryExpanded(activeTab, !isCategoryExpanded)
-                  const postSoon = () => {
-                    const doc = document
-                    const height = Math.max(
-                      doc.body.scrollHeight,
-                      doc.documentElement.scrollHeight,
-                      doc.body.offsetHeight,
-                      doc.documentElement.offsetHeight,
-                      doc.body.clientHeight,
-                      doc.documentElement.clientHeight,
-                    )
-                    if (window.self !== window.top) {
-                      console.log('[RAD][React] immediate post after click -> postMessage', { height, parentOrigin })
-                      window.parent.postMessage({ type: 'REACT_APP_HEIGHT', height, isExpanded: !isCategoryExpanded }, parentOrigin || '*')
-                    } else {
-                      console.log('[RAD][React] immediate post after click (not embedded)')
-                    }
-                    postHeightToWordPress(height, !isCategoryExpanded)
-                  }
-                  if (typeof requestAnimationFrame === 'function') {
-                    requestAnimationFrame(() => requestAnimationFrame(postSoon))
-                  } else {
-                    setTimeout(postSoon, 0)
-                  }
-                }}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                {isCategoryExpanded ? 'Tutup' : 'Lihat Semua'}
+                Lihat Semua
               </a>
             </div>
-            <ArticleGrid categoryName={categoryFromTab(activeTab)} searchTerm={query} limit={isCategoryExpanded ? undefined : 3} />
+            <ArticleGrid
+              categoryId={categories?.find(c => c.slug === activeTab)?.id}
+              searchTerm={query}
+              limit={3}
+            />
           </section>
         )}
       </main>
