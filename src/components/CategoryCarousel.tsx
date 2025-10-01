@@ -622,9 +622,8 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
           display: flex;
           align-items: center;
         }
-        
-        }
-      </style>
-    </section>
-  )
+      }
+    `}</style>
+  </section>
+)
 }
