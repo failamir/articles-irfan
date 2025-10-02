@@ -668,7 +668,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, sear
         /* Custom pagination styles */
         .swiper-pagination-custom {
           display: flex;
-          gap: 0px;
+          gap: 8px;
           align-items: center;
           flex-wrap: nowrap;
           line-height: 1;

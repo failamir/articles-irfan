@@ -117,6 +117,9 @@ export const useCategories = (): UseQueryResult<WPCategory[], Error> => {
   return useQuery({
     queryKey: [QUERY_KEYS.CATEGORIES],
     queryFn: () => categoriesApi.getCategories(),
+    select: (data) => data.filter(
+      (c) => c.slug.toLowerCase() !== 'uncategorized' && c.name.toLowerCase() !== 'uncategorized'
+    ),
     staleTime: 30 * 60 * 1000, // 30 minutes - categories don't change often
     gcTime: 60 * 60 * 1000, // 1 hour
     retry: 2,
