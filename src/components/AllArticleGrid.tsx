@@ -34,7 +34,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
 
   // Carousel settings - responsive
   const ITEMS_PER_SLIDE = isMobile ? 1 : 3 // 1 item per slide on mobile, 3 on desktop
-  const MAX_ITEMS = isMobile ? 3 : 9 // Max 3 items on mobile, 9 on desktop
+  const MAX_ITEMS = isMobile ? 10 : 10 // Max 3 items on mobile, 9 on desktop
 
   // When modal open/close or loading changes, ask parent to resize iframe
   React.useEffect(() => {
@@ -569,14 +569,38 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
 
         .carousel-controls {
           display: flex;
-          justify-content: space-between;
+          justify-content: flex-end;
           align-items: center;
+          gap: 12px;
+          flex-wrap: nowrap;
+          flex-direction: row !important;
+          white-space: nowrap;
           margin-top: 16px;
+        }
+
+        /* Keep pagination inline so it can sit next to arrows on the right */
+        /* High-specificity override for Swiper's default full-width pagination */
+        .carousel-controls .swiper-pagination-custom,
+        .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets,
+        .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets.swiper-pagination-horizontal,
+        .carousel-controls .swiper-horizontal>.swiper-pagination-bullets.swiper-pagination-custom {
+          position: static !important;
+          display: inline-flex !important;
+          width: auto !important;
+          margin: 0 !important;
+          align-items: center;
+          justify-content: flex-end !important;
+          text-align: right !important;
+          flex: 0 0 auto !important;
+          min-width: 0;
+          order: 1;
         }
 
         .navigation-buttons {
           display: flex;
           gap: 8px;
+          flex: 0 0 auto;
+          order: 2;
         }
 
         .swiper-button-prev-custom,
@@ -676,9 +700,28 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
           }
 
           .carousel-controls {
-            flex-direction: column;
+            flex-direction: row !important;
+            justify-content: flex-end;
             gap: 12px;
             align-items: center;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+          }
+
+          .carousel-controls .swiper-pagination-custom,
+          .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets,
+          .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets.swiper-pagination-horizontal,
+          .carousel-controls .swiper-horizontal>.swiper-pagination-bullets.swiper-pagination-custom {
+            position: static !important;
+            display: inline-flex !important;
+            width: auto !important;
+            margin: 0 !important;
+            align-items: center;
+            justify-content: flex-end !important;
+            text-align: right !important;
+            flex: 0 0 auto !important;
+            min-width: 0;
+            order: 1;
           }
 
           .swiper-button-prev-custom,
