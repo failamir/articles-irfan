@@ -373,10 +373,18 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
 
         .carousel-controls {
           display: flex;
-          justify-content: center;
+          justify-content: flex-end;
           align-items: center;
           margin-top: 16px;
-          gap: 16px;
+          gap: 12px;
+        }
+
+        /* Make pagination sit inline so it can align right with buttons */
+        .carousel-controls [class*="swiper-pagination-"] {
+          display: inline-flex !important;
+          width: auto !important;
+          margin: 0 !important;
+          align-items: center;
         }
 
         .mobile-see-all {
@@ -487,9 +495,10 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
 
         .carousel-controls {
           display: flex;
-          justify-content: space-between;
+          justify-content: flex-end;
           align-items: center;
           margin-top: 16px;
+          gap: 12px;
         }
 
         .navigation-buttons {
@@ -591,9 +600,16 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
           }
 
           .carousel-controls {
-            justify-content: center;
-            gap: 16px;
+            justify-content: flex-end;
+            gap: 12px;
             margin-top: 16px;
+          }
+
+          .carousel-controls [class*="swiper-pagination-"] {
+            display: inline-flex !important;
+            width: auto !important;
+            margin: 0 !important;
+            align-items: center;
           }
 
           .navigation-buttons button {
