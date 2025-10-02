@@ -569,38 +569,31 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
 
         .carousel-controls {
           display: flex;
-          justify-content: flex-end;
+          justify-content: space-between;
           align-items: center;
           gap: 12px;
           flex-wrap: nowrap;
           flex-direction: row !important;
           white-space: nowrap;
           margin-top: 16px;
+          width: 100%;
         }
 
         /* Keep pagination inline so it can sit next to arrows on the right */
-        /* High-specificity override for Swiper's default full-width pagination */
         .carousel-controls .swiper-pagination-custom,
-        .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets,
-        .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets.swiper-pagination-horizontal,
-        .carousel-controls .swiper-horizontal>.swiper-pagination-bullets.swiper-pagination-custom {
-          position: static !important;
+        .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets {
           display: inline-flex !important;
           width: auto !important;
           margin: 0 !important;
           align-items: center;
-          justify-content: flex-end !important;
-          text-align: right !important;
-          flex: 0 0 auto !important;
+          flex: 0 1 auto;
           min-width: 0;
-          order: 1;
         }
 
         .navigation-buttons {
           display: flex;
           gap: 8px;
           flex: 0 0 auto;
-          order: 2;
         }
 
         .swiper-button-prev-custom,
@@ -701,27 +694,22 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
 
           .carousel-controls {
             flex-direction: row !important;
-            justify-content: flex-end;
+            justify-content: space-between;
             gap: 12px;
             align-items: center;
             flex-wrap: nowrap;
             white-space: nowrap;
+            width: 100%;
           }
 
           .carousel-controls .swiper-pagination-custom,
-          .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets,
-          .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets.swiper-pagination-horizontal,
-          .carousel-controls .swiper-horizontal>.swiper-pagination-bullets.swiper-pagination-custom {
-            position: static !important;
+          .carousel-controls .swiper-pagination-custom.swiper-pagination-bullets {
             display: inline-flex !important;
             width: auto !important;
             margin: 0 !important;
             align-items: center;
-            justify-content: flex-end !important;
-            text-align: right !important;
-            flex: 0 0 auto !important;
+            flex: 0 1 auto;
             min-width: 0;
-            order: 1;
           }
 
           .swiper-button-prev-custom,
