@@ -441,8 +441,8 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, sear
             })}
           </div>
           <div className="navigation-buttons">
-            <button className="swiper-button-prev-custom" onClick={() => swiperRef && swiperRef.slidePrev()}>‹</button>
-            <button className="swiper-button-next-custom" onClick={() => swiperRef && swiperRef.slideNext()}>›</button>
+            <button className="swiper-button-prev-custom" onClick={() => swiperRef && swiperRef.slidePrev()}>←</button>
+            <button className="swiper-button-next-custom" onClick={() => swiperRef && swiperRef.slideNext()}>→</button>
           </div>
         </div>
       )}
