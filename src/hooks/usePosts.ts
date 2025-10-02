@@ -13,10 +13,14 @@ export const QUERY_KEYS = {
 } as const
 
 // Custom hooks for posts
-export const usePosts = (params?: PostsQueryParams): UseQueryResult<WPPost[], Error> => {
+export const usePosts = (
+  params?: PostsQueryParams,
+  options?: { enabled?: boolean }
+): UseQueryResult<WPPost[], Error> => {
   return useQuery({
     queryKey: [QUERY_KEYS.POSTS, params],
     queryFn: () => postsApi.getPosts(params),
+    enabled: options?.enabled ?? true,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     retry: 2,

@@ -4,37 +4,44 @@ import { Navigation, Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
-import { usePosts, usePost, useFilteredPosts } from '../hooks/usePosts'
+import { usePosts, usePost, useFilteredPosts, usePostsByCategory } from '../hooks/usePosts'
 import { WPPost } from '../services/api'
 import { useStore } from '../store/useStore'
 
 type Props = {
+  categoryId?: number
   categoryName?: string
   searchTerm?: string
 }
 
-export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) => {
+export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, searchTerm }) => {
   // Use Zustand store
   const { isMobile, modalPostId, setModalPostId } = useStore()
 
   // Feature toggle: set to true to use in-app modal reader; false to open posts in a new tab
   const ENABLE_MODAL = false
 
-  // React Query for posts - fetch different amounts based on device
-  const { data: allPosts, isLoading: loading, error } = usePosts({
-    per_page: isMobile ? 10 : 10 // 3 items on mobile, 12 on desktop
-  })
+  // React Query for posts - server-side fetch 10 items; refetch on category change
+  const {
+    data: allPosts,
+    isLoading: loading,
+    error,
+  } = categoryId
+    ? usePostsByCategory(categoryId, { per_page: 10 })
+    : usePosts({ per_page: 10 }, { enabled: !categoryId })
 
   // React Query for single post modal
   const { data: modalPost, isLoading: modalLoading } = usePost(modalPostId || 0)
   const [toast, setToast] = React.useState<string | null>(null)
+  const [swiperRef, setSwiperRef] = React.useState<any>(null)
+  const [activeIndex, setActiveIndex] = React.useState(0)
   const panelRef = React.useRef<HTMLDivElement | null>(null)
   const [animOpen, setAnimOpen] = React.useState(false)
   const isDark = React.useMemo(() => new URLSearchParams(window.location.search).get('theme') === 'dark', [])
 
   // Carousel settings - responsive
-  const ITEMS_PER_SLIDE = isMobile ? 1 : 3 // 1 item per slide on mobile, 3 on desktop
-  const MAX_ITEMS = isMobile ? 10 : 10 // Max 3 items on mobile, 9 on desktop
+  const GROUP_SIZE = 3 // modulus 3 across devices
+  const MAX_ITEMS = 10
 
   // When modal open/close or loading changes, ask parent to resize iframe
   React.useEffect(() => {
@@ -110,7 +117,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
 
   // Use filtered posts
   const items = useFilteredPosts(allPosts, {
-    categoryName,
+    categoryName: categoryId ? undefined : categoryName,
     searchTerm,
     limit: MAX_ITEMS,
   })
@@ -328,8 +335,15 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
     return <p className="muted">Terjadi kesalahan: {error.message}</p>
   }
 
-  // Determine if carousel needed (more than visible items)
-  const needsCarousel = items.length > ITEMS_PER_SLIDE
+  // Determine if carousel needed (more than one page)
+  const needsCarousel = items.length > (isMobile ? 1 : GROUP_SIZE)
+
+  // Build pages: group by 3 on desktop, 1 on mobile
+  const pages: WPPost[][] = []
+  for (let i = 0; i < items.length; i += 1) {
+    const sliceSize = isMobile ? 1 : GROUP_SIZE
+    pages.push(items.slice(i, i + sliceSize))
+  }
 
   const renderArticleCard = (p: WPPost) => (
     <article key={p.id} className="carousel-card">
@@ -385,22 +399,22 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
       {needsCarousel ? (
         <Swiper
           modules={[Navigation, Pagination]}
-          spaceBetween={16}
-          slidesPerView={isMobile ? 1 : 3}
+          spaceBetween={0}
+          slidesPerView={1}
           allowTouchMove={true}
           navigation={{
             nextEl: '.swiper-button-next-custom',
             prevEl: '.swiper-button-prev-custom',
           }}
-          pagination={{
-            el: '.swiper-pagination-custom',
-            clickable: true,
-          }}
+          onSwiper={(sw) => setSwiperRef(sw)}
+          onSlideChange={(sw) => setActiveIndex(sw.activeIndex)}
           className="articles-swiper"
         >
-          {items.map((p) => (
-            <SwiperSlide key={p.id}>
-              {renderArticleCard(p)}
+          {pages.map((group, idx) => (
+            <SwiperSlide key={idx}>
+              <div className="slide-grid">
+                {group.map(renderArticleCard)}
+              </div>
             </SwiperSlide>
           ))}
         </Swiper>
@@ -413,10 +427,22 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
       {/* Custom Controls */}
       {needsCarousel && (
         <div className="carousel-controls">
-          <div className="swiper-pagination-custom"></div>
+          <div className="swiper-pagination-custom">
+            {Array.from({ length: Math.ceil(items.length / GROUP_SIZE) }).map((_, i) => {
+              const pageIndex = i
+              const isActive = Math.floor(activeIndex / GROUP_SIZE) === pageIndex
+              return (
+                <span
+                  key={i}
+                  className={`swiper-pagination-bullet${isActive ? ' swiper-pagination-bullet-active' : ''}`}
+                  onClick={() => swiperRef && swiperRef.slideTo(pageIndex * GROUP_SIZE)}
+                />
+              )
+            })}
+          </div>
           <div className="navigation-buttons">
-            <button className="swiper-button-prev-custom">‹</button>
-            <button className="swiper-button-next-custom">›</button>
+            <button className="swiper-button-prev-custom" onClick={() => swiperRef && swiperRef.slidePrev()}>‹</button>
+            <button className="swiper-button-next-custom" onClick={() => swiperRef && swiperRef.slideNext()}>›</button>
           </div>
         </div>
       )}
@@ -546,6 +572,13 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
           display: flex;
           flex-direction: column;
           flex: 1 1 auto;
+        }
+
+        /* Keep the CTA aligned at the bottom for consistent card heights */
+        .carousel-body .link {
+          margin-top: auto;
+          align-self: stretch;
+          text-align: center;
         }
 
         .carousel-title {

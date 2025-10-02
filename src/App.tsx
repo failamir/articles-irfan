@@ -240,7 +240,7 @@ export default function App() {
               </a>
             </div>
             <AllArticleGrid
-              categoryName={categories?.find(c => c.slug === activeTab)?.name || categoryFromTab(activeTab)}
+              categoryId={categories?.find(c => c.slug === activeTab)?.id}
               searchTerm={query}
             />
           </section>
