@@ -222,8 +222,29 @@ export default function App() {
             <div className="section-head">
               <h2 id="featured-articles">Artikel Terbaru</h2>
             </div>
-            <AllArticleGrid searchTerm={query} />
+            <AllArticleGrid searchTerm={query} enableCarousel={true} />
           </section>
+        )}
+
+        {activeTab === 'all' && categories && categories.length > 0 && (
+          <>
+            {categories.map((cat) => (
+              <section key={cat.id} aria-labelledby={`cat-${cat.slug}`} className="articles-section">
+                <div className="section-head">
+                  <h2 id={`cat-${cat.slug}`}>{cat.name}</h2>
+                  <a
+                    href={`https://sozo.treonstudio.com/category/${cat.slug}`}
+                    className="see-all"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Lihat Semua
+                  </a>
+                </div>
+                <AllArticleGrid categoryId={cat.id} searchTerm={query} limit={3} enableCarousel={false} randomize={true} />
+              </section>
+            ))}
+          </>
         )}
 
         {activeTab !== 'all' && (

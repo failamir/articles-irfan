@@ -12,9 +12,12 @@ type Props = {
   categoryId?: number
   categoryName?: string
   searchTerm?: string
+  limit?: number
+  enableCarousel?: boolean
+  randomize?: boolean
 }
 
-export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, searchTerm }) => {
+export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, searchTerm, limit, enableCarousel = true, randomize = false }) => {
   // Use Zustand store
   const { isMobile, modalPostId, setModalPostId } = useStore()
 
@@ -41,7 +44,7 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, sear
 
   // Carousel settings - responsive
   const GROUP_SIZE = 3 // modulus 3 across devices
-  const MAX_ITEMS = 10
+  const MAX_ITEMS = typeof limit === 'number' ? limit : 10
 
   // When modal open/close or loading changes, ask parent to resize iframe
   React.useEffect(() => {
@@ -115,12 +118,23 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, sear
     setTimeout(() => setToast(null), 2000)
   }
 
-  // Use filtered posts
-  const items = useFilteredPosts(allPosts, {
+  // Use filtered posts; if randomize, fetch without limit, then shuffle and slice
+  const baseItems = useFilteredPosts(allPosts, {
     categoryName: categoryId ? undefined : categoryName,
     searchTerm,
-    limit: MAX_ITEMS,
+    limit: randomize ? undefined : MAX_ITEMS,
   })
+
+  const items = React.useMemo(() => {
+    if (!randomize) return baseItems
+    // Fisher-Yates shuffle
+    const arr = [...baseItems]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+        ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return typeof MAX_ITEMS === 'number' ? arr.slice(0, MAX_ITEMS) : arr
+  }, [baseItems, randomize, MAX_ITEMS])
 
   const findIndexById = (id: number) => items.findIndex(x => x.id === id)
   const gotoSibling = (dir: 1 | -1) => {
@@ -335,15 +349,18 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, sear
     return <p className="muted">Terjadi kesalahan: {error.message}</p>
   }
 
-  // Determine if carousel needed (more than one page)
-  const needsCarousel = items.length > (isMobile ? 1 : GROUP_SIZE)
-
-  // Build pages: group by 3 on desktop, 1 on mobile
+  // Build slides as a sliding window that moves by 1 item
+  const sliceSize = isMobile ? 1 : GROUP_SIZE
   const pages: WPPost[][] = []
-  for (let i = 0; i < items.length; i += 1) {
-    const sliceSize = isMobile ? 1 : GROUP_SIZE
-    pages.push(items.slice(i, i + sliceSize))
+  if (items.length > 0) {
+    const lastStart = Math.max(0, items.length - sliceSize)
+    for (let i = 0; i <= lastStart; i += 1) {
+      pages.push(items.slice(i, i + sliceSize))
+    }
   }
+
+  // Determine if carousel needed (more than one slide)
+  const needsCarousel = enableCarousel && pages.length > 1
 
   const renderArticleCard = (p: WPPost) => (
     <article key={p.id} className="carousel-card">
@@ -428,17 +445,29 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryId, categoryName, sear
       {needsCarousel && (
         <div className="carousel-controls">
           <div className="swiper-pagination-custom">
-            {Array.from({ length: Math.ceil(items.length / GROUP_SIZE) }).map((_, i) => {
-              const pageIndex = i
-              const isActive = Math.floor(activeIndex / GROUP_SIZE) === pageIndex
-              return (
-                <span
-                  key={i}
-                  className={`swiper-pagination-bullet${isActive ? ' swiper-pagination-bullet-active' : ''}`}
-                  onClick={() => swiperRef && swiperRef.slideTo(pageIndex * GROUP_SIZE)}
-                />
-              )
-            })}
+            {(() => {
+              const lastStart = Math.max(0, items.length - sliceSize)
+              const cappedStart = Math.min(activeIndex, lastStart)
+              const totalPages = Math.ceil(items.length / GROUP_SIZE)
+              const activePage = Math.min(Math.floor((cappedStart + GROUP_SIZE - 1) / GROUP_SIZE), totalPages - 1)
+              const maxDots = 3
+              const visible = Math.min(totalPages, maxDots)
+              const half = Math.floor(visible / 2)
+              let start = activePage - half
+              start = Math.max(0, Math.min(start, totalPages - visible))
+              const arr = Array.from({ length: visible }, (_, k) => start + k)
+              return arr.map((pageIdx) => {
+                const isActive = pageIdx === activePage
+                const targetStart = Math.min(pageIdx * GROUP_SIZE, lastStart)
+                return (
+                  <span
+                    key={pageIdx}
+                    className={`swiper-pagination-bullet${isActive ? ' swiper-pagination-bullet-active' : ''}`}
+                    onClick={() => swiperRef && swiperRef.slideTo(targetStart)}
+                  />
+                )
+              })
+            })()}
           </div>
           <div className="navigation-buttons">
             <button className="swiper-button-prev-custom" onClick={() => swiperRef && swiperRef.slidePrev()}>←</button>
