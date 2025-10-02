@@ -571,12 +571,13 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           flex-wrap: nowrap;
           flex-direction: row !important;
           white-space: nowrap;
-          margin-top: 16px;
+          margin-top: 8px;
           width: 100%;
+          min-height: 36px;
         }
 
         /* Keep pagination inline so it can sit next to arrows on the right */
@@ -588,6 +589,12 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
           align-items: center;
           flex: 0 1 auto;
           min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          box-sizing: border-box;
+          max-width: calc(100% - 140px); /* reserve extra room for buttons + gap */
+          line-height: 1;
+          padding: 0;
         }
 
         .navigation-buttons {
@@ -630,6 +637,9 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
           display: flex;
           gap: 0px;
           align-items: center;
+          flex-wrap: nowrap;
+          line-height: 1;
+          padding: 0;
         }
 
         :global(.swiper-pagination-custom .swiper-pagination-bullet) {
@@ -695,11 +705,13 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
           .carousel-controls {
             flex-direction: row !important;
             justify-content: space-between;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
             flex-wrap: nowrap;
             white-space: nowrap;
             width: 100%;
+            min-height: 32px;
+            margin-top: 8px;
           }
 
           .carousel-controls .swiper-pagination-custom,
@@ -710,6 +722,12 @@ export const AllArticleGrid: React.FC<Props> = ({ categoryName, searchTerm }) =>
             align-items: center;
             flex: 0 1 auto;
             min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            box-sizing: border-box;
+            max-width: calc(100% - 120px); /* reserve extra room on mobile */
+            line-height: 1;
+            padding: 0;
           }
 
           .swiper-button-prev-custom,
