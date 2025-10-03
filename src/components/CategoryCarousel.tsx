@@ -281,8 +281,8 @@ export const CategoryCarousel: React.FC<Props> = ({ categoryId, categorySlug, ca
           <div className="carousel-controls">
             <div className={`swiper-pagination-${categorySlug}`}></div>
             <div className="navigation-buttons">
-              <button className={`swiper-button-prev-${categorySlug}`}>‹</button>
-              <button className={`swiper-button-next-${categorySlug}`}>›</button>
+              <button className={`swiper-button-prev-${categorySlug}`}>←</button>
+              <button className={`swiper-button-next-${categorySlug}`}>→</button>
             </div>
           </div>
         )}
